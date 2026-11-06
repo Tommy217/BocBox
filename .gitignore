@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+backend/target/
+
+# Local configuration - contains passwords
+backend/config/bocbox-local.yml
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Cấu hình riêng của Claude Code trên máy
+.claude/

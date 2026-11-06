@@ -1,0 +1,52 @@
+server:
+  port: 8080
+spring:
+  # Mật khẩu DB, JWT secret: đặt trong config/bocbox-local.yml (không commit,
+  # mẫu ở config/bocbox-local.example.yml) hoặc bằng biến môi trường cùng tên bên dưới.
+  config:
+    import: optional:file:./config/bocbox-local.yml
+  datasource:
+    # Instance mặc định: localhost:1433. SQL Express thường là localhost\\SQLEXPRESS (bật TCP/IP trong SQL Server Configuration Manager)
+    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=bocbox;encrypt=true;trustServerCertificate=true}
+    username: ${DB_USER:bocbox_app}
+    password: ${DB_PASSWORD:sa}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Bảng và dữ liệu do sql/bocbox-full.sql tạo; Hibernate không tự sửa cấu trúc DB
+      ddl-auto: none
+    properties:
+      hibernate:
+        # Chuỗi lưu nvarchar để giữ dấu tiếng Việt
+        use_nationalized_character_data: true
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+  servlet:
+    multipart:
+      # ảnh khách tải lên để in áo (frontend đã thu nhỏ, backend chặn ở 3 MB)
+      max-file-size: 4MB
+      max-request-size: 5MB
+# Toàn bộ mục bocbox.* được đọc vào config/BocboxProperties.java
+bocbox:
+  price: 350000
+  cors-origins: ${CORS_ORIGINS:http://localhost:5173}
+  payment:
+    bank-id: ${BANK_ID:970436}          # mã BIN ngân hàng (ví dụ Vietcombank) - thay bằng tài khoản thật
+    account-no: ${BANK_ACCOUNT:0343883308}
+    account-name: ${BANK_ACCOUNT_NAME:BOCBOX TEAM}
+  jwt:
+    secret: ${JWT_SECRET:}          # bắt buộc, >= 32 ký tự
+    ttl-hours: 12                   # phiên nhân viên
+    customer-ttl-days: 30           # phiên khách (đăng nhập 1 lần dùng cả tháng)
+  login:
+    max-failures: 5                 # sai quá số lần này thì khóa đăng nhập tạm thời
+    lock-minutes: 15
+  report:
+    break-even-boxes: 21            # mốc hòa vốn mỗi tháng (box)
+    gross-profit-per-box: 145000    # lãi gộp ước tính mỗi box (đồng)
+  # Mỗi request /api/** in 1 dòng: GET /api/v1/memes -> 200 (12 ms) [token]. Đặt false để tắt.
+  request-log: ${REQUEST_LOG:true}
+logging:
+  level:
+    # Đặt DEBUG (hoặc biến môi trường SQL_LOG=DEBUG) để thấy từng câu SQL Hibernate gửi xuống SQL Server
+    org.hibernate.SQL: ${SQL_LOG:INFO}

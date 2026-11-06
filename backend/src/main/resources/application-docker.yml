@@ -1,0 +1,5 @@
+# Profile chạy trong Docker (docker-compose.yml đặt SPRING_PROFILES_ACTIVE=docker).
+# Kết nối DB, JWT secret, CORS lấy từ biến môi trường trong docker-compose.yml.
+server:
+  # Backend đứng sau nginx: lấy IP thật của khách từ X-Forwarded-For (để khóa đăng nhập theo IP đúng người)
+  forward-headers-strategy: native
