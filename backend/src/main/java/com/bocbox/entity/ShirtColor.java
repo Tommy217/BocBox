@@ -1,21 +1,19 @@
 package com.bocbox.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 /** Màu áo đang bán. */
-@Entity
-@Table(name = "shirt_colors")
-public class ShirtColor {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Document(collection = "shirt_colors")
+public class ShirtColor implements SequencedEntity {
+    @Id
     private Long id;
-    @Column(nullable = false, length = 50)
     private String name;
-    @Column(nullable = false, length = 7)
     private String hex;
     private boolean active = true;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    @Override public Long getId() { return id; }
+    @Override public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getHex() { return hex; }

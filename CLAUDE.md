@@ -7,7 +7,7 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
 - Trang chủ (`pages/Home.tsx`) đã gộp phần "Trong hộp" cũ (05/11/2026, bỏ `BoxPage.tsx`, `/box` chuyển về `/`): hero → dải meme → mở hộp → áo (tự custom / `SHOP_DESIGNS`) → khô gấu → bao bì, tag, thiệp → 4 bước + lịch đợt → FAQ → tham khảo thị trường → CTA. Ảnh tham khảo trong `frontend/public/products/` (Lazada, có link nguồn; `kho-gau-nhom.webp` là ảnh nhóm gửi).
 - Chọn mẫu shop (trang chủ, `/shop`) đi qua `applyTemplate` (`lib/draft.ts`): đang có bản thiết kế dở thì hỏi trước, không chọn mẫu khác thì nháp giữ nguyên.
 - Trang `/shop` (`pages/Shop.tsx`, dữ liệu `lib/readyBoxes.ts`): kệ 12 hộp có sẵn kiểu thẻ vuông (tham khảo thecurator.vn), áo đã thiết kế, khô gấu hiện mờ (bí mật). "Chọn hộp này" ghi nháp rồi mở Xưởng in ở bước Tag & thiệp.
-- Series khô gấu (6 mẫu, slug `chien-binh`, `mat-doge`, `meo-banh-mi`, `meo-meme`, `sinh-vat-nguyen`, `bo-dong-co`) định nghĩa ở `frontend/src/lib/khoGau.ts` (tên, ảnh, nguồn) và phải khớp bảng `keychain_designs` trong `backend/sql/bocbox-full.sql`. Hiển thị bằng `KhoGauPhoto` (kệ trang chủ, mascot, tồn kho Admin).
+- Series khô gấu (6 mẫu, slug `chien-binh`, `mat-doge`, `meo-banh-mi`, `meo-meme`, `sinh-vat-nguyen`, `bo-dong-co`) định nghĩa ở `frontend/src/lib/khoGau.ts` (tên, ảnh, nguồn) và phải khớp collection `keychain_designs` trong `backend/db/bocbox-full.mongodb.js`. Hiển thị bằng `KhoGauPhoto` (kệ trang chủ, mascot, tồn kho Admin).
 - **Không bán item thêm.** Yêu cầu ngoài công cụ thiết kế → khách liên hệ Zalo/Messenger, báo giá riêng.
 - **Pre-order theo đợt tuần**: mở thứ Hai, đóng Chủ nhật 23:59 (Asia/Ho_Chi_Minh), in thứ Hai–Tư, đóng hộp thứ Năm, giao thứ Năm–Sáu tuần sau. Khách trả trước 100% (VietQR, nội dung chuyển khoản = mã đơn).
 - Trải nghiệm đi kèm: **form ngụy trang** (Google Form mẫu để hỏi size/sở thích người nhận mà không lộ quà), **author tag** "Thiết kế bởi … dành cho …", **thiệp** (cập nhật 01/11/2026).
@@ -17,7 +17,7 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
 
 ## Meme và ảnh áo
 - Quyết định của chủ dự án (30/10/2026): bản demo môn học **dùng ảnh meme gốc tải từ mạng** (template Imgflip), không cần sàng lọc bản quyền. Nếu bán thật thì phải xem lại.
-- Ảnh meme in áo: `frontend/public/memes/{slug}.jpg` (20 meme). Slug phải khớp bảng `memes` trong `backend/sql/bocbox-full.sql`.
+- Ảnh meme in áo: `frontend/public/memes/{slug}.jpg` (20 meme). Slug phải khớp collection `memes` trong `backend/db/bocbox-full.mongodb.js`.
 - Mockup áo: ảnh áo trắng thật `frontend/public/mockup/tee-white.png` (THOR, Wikimedia Commons, CC BY 2.0, ghi nguồn ở footer). Màu áo khác được nhuộm bằng canvas trong `art.ts` (`drawTee`). Vùng in đo theo tỉ lệ ảnh, xem `PRINT_BOX`. Tag vải vẽ ở `TAG_SPOT` khi truyền `tag` cho `TeePreview`/`TeeEditor`.
 - Thiết kế áo = 1–4 lớp meme `{slug,x,y,w}` + khối chữ `{x,y,s}`, tọa độ theo tỉ lệ vùng in, lưu ở `layoutJson` của đơn (kiểm tra ở `OrderService.applyLayout`). Đơn cũ không có bố cục được đổi bằng `withLayout`.
 - Tag vải và thiệp kraft vẽ bằng canvas trong `lib/paper.ts` (`drawLabel`, `drawCard`; sợi vải, giấy kraft, mực in có seed nên ổn định). Component `AuthorTag`, `GiftCard` trong `components/Cards.tsx`; nền "mở hộp" `.flatlay` dùng ảnh giấy rơm thật `products/giay-rom.jpg`.
@@ -25,7 +25,7 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
 
 ## Công nghệ
 - `frontend/`: React 18 + Vite + TypeScript, react-router (HashRouter), Framer Motion, canvas-confetti, icon `@phosphor-icons/react` (MIT). CSS thuần trong `src/styles.css`.
-  - `npm run dev` → nối backend `VITE_API_URL` (mặc định http://localhost:8080/api/v1). **Không còn API giả lập** (đã bỏ `mockApi.ts`, `.env.demo`, `dev:mock` ngày 04/11/2026): frontend luôn cần backend + SQL Server.
+  - `npm run dev` → nối backend `VITE_API_URL` (mặc định http://localhost:8080/api/v1). **Không còn API giả lập** (đã bỏ `mockApi.ts`, `.env.demo`, `dev:mock` ngày 04/11/2026): frontend luôn cần backend + MongoDB.
 - `backend/`: Java 21, Spring Boot 3.3.5 (Web, Data JPA, Validation, Scheduling, Security), Maven.
   - **Cấu trúc package `com.bocbox`** (tái cấu trúc 06/11/2026, trước là `com.bocbox.demo` với `domain/repo/service/web`):
     `config/` (SecurityConfig, CorsConfig, `BocboxProperties` = toàn bộ `bocbox.*` trong application.yml) ·
@@ -35,11 +35,15 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
     `exception/` (`AppException` + `ErrorType`, `GlobalExceptionHandler` đổi sang mã HTTP, body `{"message": ...}`) · `web/filter/RequestLogFilter`.
   - Quy ước: controller chỉ nhận request, gọi service, map sang DTO; service không ném lỗi HTTP (dùng `AppException`); API không trả entity trực tiếp.
   - Test: `src/test/java/com/bocbox` (luồng trạng thái đơn, lọc từ cấm, nhận diện ảnh, gợi ý size), chạy `mvnw test`. Profile `docker` (`application-docker.yml`) bật `forward-headers-strategy` khi chạy sau nginx.
-  - **Chỉ dùng SQL Server** (đã bỏ H2 ngày 01/11/2026). Chuỗi lưu `nvarchar` (`hibernate.use_nationalized_character_data`). DB `bocbox` collation `Vietnamese_100_CI_AS`, tài khoản `bocbox_app`.
-  - Mật khẩu DB, JWT secret nằm trong `backend/config/bocbox-local.yml` (**không commit**, có trong `.gitignore`; mẫu `config/bocbox-local.example.yml`), được nạp qua `spring.config.import`. Biến môi trường cùng tên (`DB_PASSWORD`, `JWT_SECRET`…) vẫn dùng được.
-  - **Cấu trúc bảng + toàn bộ dữ liệu nằm trong một script tổng `backend/sql/bocbox-full.sql`** (10 bảng, có `customers`, `custom_images`; 24 tài khoản khách mẫu `0901000001`…`0901000024`, mật khẩu `Bocbox@2026`) (04/11/2026, thay `create-db.sql`, `create-db-sa.sql`, `DataSeeder`, `DemoDataSeeder`). Script xóa DB `bocbox`, tạo lại DB + login `bocbox_app` (`@AppPassword` ở mục 2) + 8 bảng + dữ liệu: danh mục, 2 tài khoản `admin`/`nhanvien` (mật khẩu `Bocbox@2026`, BCrypt), 5 đợt tính theo thứ Hai của tuần chạy script (đợt cuối đang mở) và 55 đơn mẫu.
-    - Backend để `ddl-auto: none`: Hibernate không tạo/sửa bảng, không nạp dữ liệu. **Đổi entity trong `entity/` thì sửa mục 3 của script cho khớp** (tên cột theo snake_case, chuỗi `nvarchar`, thời gian `datetime2(6)`).
-    - Script được sinh bằng cách port logic seeder cũ (Java `Random(20261031)`); trạng thái đơn mẫu chụp theo ngày 04/11/2026.
+  - **Database: MongoDB** (06/11/2026 chuyển từ SQL Server sang để deploy với MongoDB Atlas; đã bỏ JPA/Hibernate, `backend/sql/`). Spring Data MongoDB, kết nối qua `spring.data.mongodb.uri` = biến `MONGODB_URI` (database `bocbox`).
+    - Document giữ **id số (Long)** như bản SQL để frontend không đổi: id mới cấp từ collection `counters` (`config/IdSequenceCallback`, entity implements `SequencedEntity`).
+    - Đơn lưu `batchId`, `customerId` (không JOIN); `mapper/OrderResponseAssembler` nạp gộp đợt + tài khoản khi trả API. Không dùng transaction (mỗi thao tác chủ yếu ghi 1 document).
+    - Ngày giờ (`LocalDateTime`/`LocalDate`) lưu theo múi giờ JVM → backend phải chạy giờ Việt Nam (Dockerfile đặt `-Duser.timezone=Asia/Ho_Chi_Minh`).
+    - Index duy nhất (slug, mã đơn, mã đợt, SĐT, username, uuid ảnh) do script tạo; `auto-index-creation: false`.
+  - Chuỗi kết nối MongoDB, JWT secret nằm trong `backend/config/bocbox-local.yml` (**không commit**, có trong `.gitignore`; mẫu `config/bocbox-local.example.yml`), được nạp qua `spring.config.import`. Biến môi trường cùng tên (`MONGODB_URI`, `JWT_SECRET`…) vẫn dùng được.
+  - **Toàn bộ dữ liệu nằm trong một script tổng `backend/db/bocbox-full.mongodb.js`** (chạy bằng mongosh / tab MONGOSH của Compass; docker-compose tự chạy lần đầu). Script xóa database `bocbox`, tạo lại 10 collection + index + `counters`: danh mục, 2 tài khoản `admin`/`nhanvien` và 24 tài khoản khách `0901000001`…`0901000024` (mật khẩu chung `Bocbox@2026`, BCrypt), 5 đợt tính theo thứ Hai của tuần chạy script (đợt cuối đang mở) và 55 đơn mẫu.
+    - Đổi field trong `entity/` thì sửa script cho khớp (tên field camelCase giống Java, id `NumberLong`, số nguyên `NumberInt`, giá `NumberLong`).
+    - Dữ liệu sinh bằng cách port logic seeder cũ (Java `Random(20261031)`); trạng thái đơn mẫu chụp theo ngày 04/11/2026.
   - **Khách vãng lai (guest) làm được mọi thứ trừ đặt đơn** (05/11/2026). Bấm đặt hộp khi chưa đăng nhập → popup đăng nhập/đăng ký (`lib/auth.tsx`, `requireLogin()`), xong thì đặt tiếp luôn, thiết kế không mất.
     - Tài khoản khách: bảng `customers`, đăng nhập bằng **SĐT + mật khẩu** (BCrypt), JWT role `CUSTOMER`, subject `customer:{id}`, hạn 30 ngày (`bocbox.jwt.customer-ttl-days`). API trong `controller/CustomerController.java` (nghiệp vụ ở `service/CustomerAccountService`, `ImageService`, `PaymentService`) dưới `/api/v1/customer/**` (register, login, me, orders, uploads). Phiên phía trình duyệt: `lib/customer.ts` (tách với phiên nhân viên `lib/session.ts`).
     - "Đơn của tôi" (`/my-orders`, `pages/MyOrders.tsx`) thay cho tra đơn bằng mã + 4 số cuối SĐT (đã bỏ `Lookup.tsx` và header `X-Phone-Last4`). Khách chỉ xem/sửa/hủy được đơn của chính tài khoản mình.
@@ -64,8 +68,9 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
 
 ## Trạng thái hiện tại (01/11/2026)
 - 05/11/2026: thêm tài khoản khách (guest xem/thiết kế tự do, đặt đơn mới cần đăng nhập), "Đơn của tôi", luật duyệt đơn trước khi thanh toán, tải ảnh lên in áo, gộp trang chủ + "Trong hộp", xưởng in mở ra áo trơn. Phải chạy lại `bocbox-full.sql`.
-- 04/11/2026: bỏ mock data và seeder, DB dựng lại bằng `backend/sql/bocbox-full.sql`.
-- Backend chạy với SQL Server trên máy (localhost:1433), đã nạp dữ liệu demo; bộ kiểm thử API quản trị (đăng nhập, nhân viên, khóa đăng nhập, kho, meme, thiệp) đạt.
+- 06/11/2026: tái cấu trúc backend theo chuẩn Spring Boot; chuyển database sang MongoDB (Atlas khi deploy); chuẩn bị deploy Vercel (frontend) + Render (backend).
+- 04/11/2026: bỏ mock data và seeder, DB dựng lại bằng script tổng.
+- (Trước 06/11, bản SQL Server) backend đã chạy với dữ liệu demo; bộ kiểm thử API quản trị (đăng nhập, nhân viên, khóa đăng nhập, kho, meme, thiệp) đạt.
 - Frontend: đã chạy toàn luồng với backend thật (kệ hộp → Xưởng in → thiệp/tag → đặt đơn) và khu quản trị (trước đây chạy ở chế độ mock, nay chỉ còn backend thật).
   - Máy không có `mvn` trong PATH; dùng `C:\Users\Admin\.m2\wrapper\dists\apache-maven-3.10.0-bin\...\bin\mvn.cmd`.
   - Maven báo lỗi PKIX khi tải thư viện → đặt `$env:MAVEN_OPTS="-Djavax.net.ssl.trustStoreType=Windows-ROOT"` trước khi build.
@@ -73,7 +78,7 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
 - Chưa thử: kéo thả bằng tay trên điện thoại thật; in tag/thiệp ra giấy thật.
 
 ## Việc tiếp theo (theo thứ tự)
-1. Flyway thay script tay `bocbox-full.sql`.
+1. Script migration (vd. Mongock) thay script tay `bocbox-full.mongodb.js`.
 2. Cấu hình tài khoản ngân hàng thật cho VietQR; link Google Form thật cho 3 mẫu form ngụy trang.
 3. Email xác nhận đơn và nhắc dịp tặng (trước 14 ngày).
 4. Thêm ảnh chụp thật tag vải/thiệp khi nhóm làm mẫu (hiện là ảnh dựng bằng canvas).

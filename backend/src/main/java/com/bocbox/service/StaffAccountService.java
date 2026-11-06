@@ -10,7 +10,6 @@ import com.bocbox.repository.StaffUserRepository;
 import com.bocbox.security.LoginThrottle;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -30,7 +29,6 @@ public class StaffAccountService {
         this.dummyHash = passwords.encode("bocbox-dummy");
     }
 
-    @Transactional
     public StaffUser login(String rawUsername, String password, String clientIp) {
         String username = rawUsername.trim().toLowerCase();
         String[] keys = { "u:" + username, "ip:" + clientIp };
@@ -48,7 +46,6 @@ public class StaffAccountService {
     }
 
     /** Nhân viên tự đổi mật khẩu, phải nhập đúng mật khẩu hiện tại. */
-    @Transactional
     public void changePassword(String username, ChangePasswordRequest r) {
         StaffUser u = users.findByUsername(username).filter(StaffUser::isActive)
                 .orElseThrow(() -> AppException.unauthorized("Tài khoản không còn hoạt động"));
@@ -58,13 +55,11 @@ public class StaffAccountService {
     }
 
     /** ADMIN trước, rồi theo tên đăng nhập. */
-    @Transactional(readOnly = true)
     public List<StaffUser> list() {
         return users.findAll().stream()
                 .sorted(Comparator.comparing(StaffUser::getRole).reversed().thenComparing(StaffUser::getUsername)).toList();
     }
 
-    @Transactional
     public StaffUser create(CreateStaffRequest r) {
         if (users.findByUsername(r.username()).isPresent()) throw AppException.conflict("Tên đăng nhập đã có người dùng");
         StaffUser u = new StaffUser();
@@ -77,7 +72,6 @@ public class StaffAccountService {
     }
 
     /** Không cho tự khóa / tự hạ quyền, và luôn phải còn ít nhất một ADMIN đang hoạt động. */
-    @Transactional
     public StaffUser update(Long id, UpdateStaffRequest r, String currentUsername) {
         StaffUser u = find(id);
         boolean losesAdmin = u.getRole() == StaffRole.ADMIN && u.isActive() && (r.role() != StaffRole.ADMIN || !r.active());
@@ -92,7 +86,6 @@ public class StaffAccountService {
     }
 
     /** Đặt lại mật khẩu cho nhân viên quên mật khẩu (quản trị báo mật khẩu mới trực tiếp). */
-    @Transactional
     public void resetPassword(Long id, String newPassword) {
         StaffUser u = find(id);
         u.setPasswordHash(passwords.encode(newPassword));

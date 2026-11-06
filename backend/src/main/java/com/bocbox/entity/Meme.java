@@ -1,31 +1,25 @@
 package com.bocbox.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import com.bocbox.entity.enums.MemeStatus;
 
 /** Meme in lên áo; ảnh nằm ở frontend/public/memes/{slug}.jpg. */
-@Entity
-@Table(name = "memes")
-public class Meme {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Document(collection = "memes")
+public class Meme implements SequencedEntity {
+    @Id
     private Long id;
-    @Column(nullable = false, unique = true, length = 50)
     private String slug;
-    @Column(nullable = false, length = 100)
     private String name;
-    @Column(length = 200)
     private String tags;
-    @Column(length = 300)
     private String screeningNote;
-    /** Link nguồn tham khảo (Know Your Meme, Imgflip...); null nếu nhóm tự sáng tác. */
-    @Column(length = 300)
+    /** Link nguồn tham khảo (Imgflip...); null nếu nhóm tự sáng tác. */
     private String sourceUrl;
-    @Enumerated(EnumType.STRING) @Column(length = 20)
     private MemeStatus status = MemeStatus.APPROVED;
     private int popularity;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    @Override public Long getId() { return id; }
+    @Override public void setId(Long id) { this.id = id; }
     public String getSlug() { return slug; }
     public void setSlug(String slug) { this.slug = slug; }
     public String getName() { return name; }

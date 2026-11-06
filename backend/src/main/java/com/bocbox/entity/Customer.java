@@ -1,28 +1,24 @@
 package com.bocbox.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
-/** Tài khoản khách: đăng nhập bằng số điện thoại + mật khẩu (BCrypt). Khách vãng lai không cần tài khoản cho tới lúc đặt đơn. */
-@Entity
-@Table(name = "customers")
-public class Customer {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+/** Tài khoản khách: đăng nhập bằng số điện thoại (duy nhất) + mật khẩu BCrypt. Khách vãng lai không cần tài khoản cho tới lúc đặt đơn. */
+@Document(collection = "customers")
+public class Customer implements SequencedEntity {
+    @Id
     private Long id;
-    @Column(nullable = false, unique = true, length = 15)
     private String phone;
-    @Column(nullable = false, length = 100)
     private String passwordHash;
-    @Column(nullable = false, length = 100)
     private String fullName;
-    @Column(length = 120)
     private String email;
     private boolean active = true;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    @Override public Long getId() { return id; }
+    @Override public void setId(Long id) { this.id = id; }
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
     public String getPasswordHash() { return passwordHash; }

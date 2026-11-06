@@ -5,14 +5,12 @@ import com.bocbox.entity.enums.MemeStatus;
 import com.bocbox.exception.AppException;
 import com.bocbox.repository.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
 
 /** Danh mục bán hàng: meme, màu áo, bảng size, form ngụy trang, khô gấu (kể cả phần quản trị kho / thư viện meme). */
 @Service
-@Transactional(readOnly = true)
 public class CatalogService {
     private final MemeRepository memes;
     private final ShirtColorRepository colors;
@@ -36,7 +34,6 @@ public class CatalogService {
     public List<Meme> allMemes() { return memes.findAll().stream().sorted(MOST_POPULAR).toList(); }
 
     /** ADMIN ẩn (REJECTED) hoặc hiện lại (APPROVED) một meme. Đơn cũ đã dùng meme đó không bị ảnh hưởng. */
-    @Transactional
     public Meme setMemeStatus(Long id, MemeStatus status) {
         Meme m = memes.findById(id).orElseThrow(() -> AppException.notFound("Không tìm thấy meme"));
         m.setStatus(status);
@@ -52,7 +49,6 @@ public class CatalogService {
     public List<KeychainDesign> keychains() { return keychains.findAll(); }
 
     /** Cập nhật tồn kho khô gấu sau khi nhập hàng hoặc kiểm kho. */
-    @Transactional
     public KeychainDesign setStock(Long id, int stockQty) {
         KeychainDesign k = keychains.findById(id).orElseThrow(() -> AppException.notFound("Không tìm thấy mẫu khô gấu"));
         k.setStockQty(stockQty);

@@ -4,6 +4,7 @@ import com.bocbox.dto.response.BatchResponse;
 import com.bocbox.dto.response.BatchSummaryResponse;
 import com.bocbox.dto.response.OrderResponse;
 import com.bocbox.mapper.OrderMapper;
+import com.bocbox.mapper.OrderResponseAssembler;
 import com.bocbox.service.BatchService;
 import com.bocbox.service.OrderService;
 import com.bocbox.service.ReportService;
@@ -19,7 +20,10 @@ public class AdminBatchController {
     private final OrderService orders;
     private final ReportService reports;
 
-    public AdminBatchController(BatchService batches, OrderService orders, ReportService reports) {
+    private final OrderResponseAssembler assembler;
+
+    public AdminBatchController(OrderResponseAssembler assembler, BatchService batches, OrderService orders, ReportService reports) {
+        this.assembler = assembler;
         this.batches = batches; this.orders = orders; this.reports = reports;
     }
 
@@ -36,6 +40,6 @@ public class AdminBatchController {
 
     @PostMapping("/{id}/assign-keychains")
     public List<OrderResponse> assignKeychains(@PathVariable Long id) {
-        return orders.assignKeychains(id).stream().map(OrderMapper::toResponse).toList();
+        return assembler.many(orders.assignKeychains(id));
     }
 }

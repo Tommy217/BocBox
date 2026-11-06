@@ -11,7 +11,6 @@ import com.bocbox.security.LoginThrottle;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -29,7 +28,6 @@ public class CustomerAccountService {
         this.dummyHash = passwords.encode("bocbox-dummy");
     }
 
-    @Transactional
     public Customer register(CustomerRegisterRequest r) {
         String phone = r.phone().trim();
         if (customers.existsByPhone(phone)) throw AppException.conflict("Số điện thoại này đã có tài khoản, hãy đăng nhập");
@@ -43,7 +41,6 @@ public class CustomerAccountService {
         return customers.save(c);
     }
 
-    @Transactional
     public Customer login(String rawPhone, String password, String clientIp) {
         String phone = rawPhone.replaceAll("\\s", "");
         String[] keys = { "c:" + phone, "ip:" + clientIp };
@@ -61,14 +58,12 @@ public class CustomerAccountService {
     }
 
     /** Tài khoản khách của token đang gọi API (đã kiểm tra còn hoạt động). */
-    @Transactional(readOnly = true)
     public Customer current(Jwt t) {
         Long id = JwtTokenService.customerId(t).orElseThrow(() -> AppException.unauthorized("Cần đăng nhập tài khoản khách"));
         return customers.findById(id).filter(Customer::isActive)
                 .orElseThrow(() -> AppException.unauthorized("Tài khoản không còn hoạt động"));
     }
 
-    @Transactional
     public Customer updateProfile(Jwt t, UpdateProfileRequest r) {
         Customer c = current(t);
         c.setFullName(r.fullName().trim());
@@ -76,7 +71,6 @@ public class CustomerAccountService {
         return customers.save(c);
     }
 
-    @Transactional
     public void changePassword(Jwt t, ChangePasswordRequest r) {
         Customer c = current(t);
         if (!passwords.matches(r.currentPassword(), c.getPasswordHash())) throw AppException.invalid("Mật khẩu hiện tại không đúng");

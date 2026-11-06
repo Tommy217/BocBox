@@ -1,14 +1,13 @@
 package com.bocbox.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 /** Bảng size theo chiều cao (cm) và cân nặng (kg). */
-@Entity
-@Table(name = "sizes")
-public class SizeChart {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Document(collection = "sizes")
+public class SizeChart implements SequencedEntity {
+    @Id
     private Long id;
-    @Column(nullable = false, length = 5)
     private String code;
     private int minHeight;
     private int maxHeight;
@@ -16,8 +15,8 @@ public class SizeChart {
     private int maxWeight;
     private int sortOrder;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    @Override public Long getId() { return id; }
+    @Override public void setId(Long id) { this.id = id; }
     public String getCode() { return code; }
     public void setCode(String code) { this.code = code; }
     public int getMinHeight() { return minHeight; }

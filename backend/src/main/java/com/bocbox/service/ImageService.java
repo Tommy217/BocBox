@@ -5,7 +5,6 @@ import com.bocbox.entity.Customer;
 import com.bocbox.exception.AppException;
 import com.bocbox.repository.CustomImageRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -20,7 +19,6 @@ public class ImageService {
 
     public ImageService(CustomImageRepository images) { this.images = images; }
 
-    @Transactional
     public CustomImage upload(Customer owner, MultipartFile file) {
         if (file == null || file.isEmpty()) throw AppException.invalid("File rỗng");
         if (file.getSize() > MAX_BYTES) throw AppException.tooLarge("Ảnh tối đa 3 MB");
@@ -39,7 +37,6 @@ public class ImageService {
         return images.save(img);
     }
 
-    @Transactional(readOnly = true)
     public CustomImage get(String uuid) {
         return images.findByUuid(uuid).orElseThrow(() -> AppException.notFound("Không tìm thấy ảnh"));
     }

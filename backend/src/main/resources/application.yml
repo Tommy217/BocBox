@@ -1,24 +1,17 @@
 server:
-  port: 8080
+  port: ${PORT:8080}   # Render/cloud cấp cổng qua biến PORT
 spring:
-  # Mật khẩu DB, JWT secret: đặt trong config/bocbox-local.yml (không commit,
+  # Chuỗi kết nối MongoDB, JWT secret: đặt trong config/bocbox-local.yml (không commit,
   # mẫu ở config/bocbox-local.example.yml) hoặc bằng biến môi trường cùng tên bên dưới.
   config:
     import: optional:file:./config/bocbox-local.yml
-  datasource:
-    # Instance mặc định: localhost:1433. SQL Express thường là localhost\\SQLEXPRESS (bật TCP/IP trong SQL Server Configuration Manager)
-    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=bocbox;encrypt=true;trustServerCertificate=true}
-    username: ${DB_USER:bocbox_app}
-    password: ${DB_PASSWORD:sa}
-  jpa:
-    open-in-view: false
-    hibernate:
-      # Bảng và dữ liệu do sql/bocbox-full.sql tạo; Hibernate không tự sửa cấu trúc DB
-      ddl-auto: none
-    properties:
-      hibernate:
-        # Chuỗi lưu nvarchar để giữ dấu tiếng Việt
-        use_nationalized_character_data: true
+  data:
+    mongodb:
+      # MongoDB Atlas: mongodb+srv://<user>:<mật khẩu>@<cluster>.mongodb.net/bocbox?retryWrites=true&w=majority
+      # Máy cá nhân / docker-compose: mongodb://localhost:27017/bocbox. Tên database nằm sau dấu "/" cuối.
+      uri: ${MONGODB_URI:mongodb://localhost:27017/bocbox}
+      # Index (mã đơn, slug, SĐT... duy nhất) do db/bocbox-full.mongodb.js tạo, Spring không tự tạo
+      auto-index-creation: false
   jackson:
     time-zone: Asia/Ho_Chi_Minh
   servlet:
@@ -32,8 +25,8 @@ bocbox:
   cors-origins: ${CORS_ORIGINS:http://localhost:5173}
   payment:
     bank-id: ${BANK_ID:970436}          # mã BIN ngân hàng (ví dụ Vietcombank) - thay bằng tài khoản thật
-    account-no: ${BANK_ACCOUNT:0343883308}
-    account-name: ${BANK_ACCOUNT_NAME:BOCBOX TEAM}
+    account-no: ${BANK_ACCOUNT:0000000000}
+    account-name: ${BANK_ACCOUNT_NAME:BOCBOX DEMO}
   jwt:
     secret: ${JWT_SECRET:}          # bắt buộc, >= 32 ký tự
     ttl-hours: 12                   # phiên nhân viên
@@ -48,5 +41,5 @@ bocbox:
   request-log: ${REQUEST_LOG:true}
 logging:
   level:
-    # Đặt DEBUG (hoặc biến môi trường SQL_LOG=DEBUG) để thấy từng câu SQL Hibernate gửi xuống SQL Server
-    org.hibernate.SQL: ${SQL_LOG:INFO}
+    # Đặt DEBUG (hoặc biến môi trường DB_LOG=DEBUG) để thấy từng truy vấn gửi xuống MongoDB
+    org.springframework.data.mongodb.core.MongoTemplate: ${DB_LOG:INFO}

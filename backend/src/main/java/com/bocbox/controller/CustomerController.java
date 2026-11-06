@@ -6,6 +6,7 @@ import com.bocbox.entity.CustomImage;
 import com.bocbox.entity.Customer;
 import com.bocbox.mapper.AccountMapper;
 import com.bocbox.mapper.OrderMapper;
+import com.bocbox.mapper.OrderResponseAssembler;
 import com.bocbox.security.JwtTokenService;
 import com.bocbox.service.CustomerAccountService;
 import com.bocbox.service.ImageService;
@@ -34,8 +35,11 @@ public class CustomerController {
     private final ImageService images;
     private final JwtTokenService tokens;
 
-    public CustomerController(CustomerAccountService accounts, OrderService orders, PaymentService payment,
+    private final OrderResponseAssembler assembler;
+
+    public CustomerController(OrderResponseAssembler assembler, CustomerAccountService accounts, OrderService orders, PaymentService payment,
                               ImageService images, JwtTokenService tokens) {
+        this.assembler = assembler;
         this.accounts = accounts; this.orders = orders; this.payment = payment; this.images = images; this.tokens = tokens;
     }
 
@@ -64,28 +68,28 @@ public class CustomerController {
     // ---------- đơn của tôi ----------
     @GetMapping("/orders")
     public List<OrderResponse> myOrders(@AuthenticationPrincipal Jwt t) {
-        return orders.listForCustomer(accounts.current(t)).stream().map(OrderMapper::toResponse).toList();
+        return assembler.many(orders.listForCustomer(accounts.current(t)));
     }
 
     @PostMapping("/orders")
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse create(@AuthenticationPrincipal Jwt t, @Valid @RequestBody CreateOrderRequest r) {
-        return OrderMapper.toResponse(orders.create(accounts.current(t), r));
+        return assembler.one(orders.create(accounts.current(t), r));
     }
 
     @GetMapping("/orders/{code}")
     public OrderResponse get(@AuthenticationPrincipal Jwt t, @PathVariable String code) {
-        return OrderMapper.toResponse(orders.getForCustomer(code, accounts.current(t)));
+        return assembler.one(orders.getForCustomer(code, accounts.current(t)));
     }
 
     @PutMapping("/orders/{code}")
     public OrderResponse update(@AuthenticationPrincipal Jwt t, @PathVariable String code, @Valid @RequestBody CreateOrderRequest r) {
-        return OrderMapper.toResponse(orders.update(code, accounts.current(t), r));
+        return assembler.one(orders.update(code, accounts.current(t), r));
     }
 
     @PostMapping("/orders/{code}/cancel")
     public OrderResponse cancel(@AuthenticationPrincipal Jwt t, @PathVariable String code) {
-        return OrderMapper.toResponse(orders.cancel(code, accounts.current(t)));
+        return assembler.one(orders.cancel(code, accounts.current(t)));
     }
 
     /** Mã VietQR chỉ có sau khi quản trị đã duyệt đơn (trạng thái chờ thanh toán). */

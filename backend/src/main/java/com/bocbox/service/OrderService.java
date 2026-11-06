@@ -12,14 +12,13 @@ import com.bocbox.exception.AppException;
 import com.bocbox.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Nghiệp vụ đơn hàng: khách đặt / sửa / hủy, quản trị duyệt, chuyển trạng thái, bốc khô gấu. */
@@ -38,37 +37,38 @@ public class OrderService {
     private final SpyFormTemplateRepository spyForms;
     private final CustomImageRepository images;
     private final ObjectMapper mapper;
-    private final BigDecimal price;
+    private final long price;
+    private final CustomerRepository customers;
+    private final BatchRepository batches;
     private final Random random = new Random();
     private final SecureRandom codeRandom = new SecureRandom();
 
     public OrderService(CustomerOrderRepository orders, BatchService batchService, ContentFilter filter,
                         KeychainDesignRepository keychains, ShirtColorRepository colors, MemeRepository memes,
                         SpyFormTemplateRepository spyForms, CustomImageRepository images, ObjectMapper mapper,
-                        BocboxProperties props) {
+                        CustomerRepository customers, BatchRepository batches, BocboxProperties props) {
         this.orders = orders; this.batchService = batchService; this.filter = filter;
         this.keychains = keychains; this.colors = colors; this.memes = memes; this.spyForms = spyForms; this.images = images;
-        this.mapper = mapper; this.price = BigDecimal.valueOf(props.price());
+        this.mapper = mapper; this.price = props.price();
+        this.customers = customers; this.batches = batches;
     }
 
     // ---------- Khách ----------
 
     /** Khách đã đăng nhập đặt đơn: đơn vào hàng chờ duyệt, chưa cần trả tiền. */
-    @Transactional
     public CustomerOrder create(Customer customer, CreateOrderRequest r) {
         CustomerOrder o = new CustomerOrder();
         o.setCode(nextCode());
         o.setCreatedAt(LocalDateTime.now(BatchService.VN));
         o.setPrice(price);
-        o.setBatch(batchService.currentOpenBatch());
-        o.setCustomer(customer);
+        o.setBatchId(batchService.currentOpenBatch().getId());
+        o.setCustomerId(customer.getId());
         o.setStatus(OrderStatus.PENDING_APPROVAL);
         apply(o, r);
         return orders.save(o);
     }
 
     /** Khách sửa thiết kế (thường sau khi bị báo "Cần sửa"): đơn quay lại hàng chờ duyệt. */
-    @Transactional
     public CustomerOrder update(String code, Customer customer, CreateOrderRequest r) {
         CustomerOrder o = getForCustomer(code, customer);
         if (o.getStatus() != OrderStatus.PENDING_APPROVAL && o.getStatus() != OrderStatus.PENDING_PAYMENT)
@@ -80,7 +80,6 @@ public class OrderService {
         return orders.save(o);
     }
 
-    @Transactional
     public CustomerOrder cancel(String code, Customer customer) {
         CustomerOrder o = getForCustomer(code, customer);
         if (o.getStatus() != OrderStatus.PENDING_APPROVAL && o.getStatus() != OrderStatus.PENDING_PAYMENT && o.getStatus() != OrderStatus.PAID)
@@ -90,13 +89,11 @@ public class OrderService {
         return orders.save(o);
     }
 
-    @Transactional(readOnly = true)
     public List<CustomerOrder> listForCustomer(Customer customer) {
         return orders.findByCustomerIdOrderByCreatedAtDesc(customer.getId());
     }
 
     /** Khách chỉ xem được đơn của chính tài khoản mình; đơn của người khác báo như không tồn tại. */
-    @Transactional(readOnly = true)
     public CustomerOrder getForCustomer(String code, Customer customer) {
         return orders.findByCode(code.toUpperCase()).filter(o -> o.belongsTo(customer))
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy đơn " + code + " trong tài khoản của bạn"));
@@ -104,25 +101,25 @@ public class OrderService {
 
     // ---------- Quản trị ----------
 
-    @Transactional(readOnly = true)
     public CustomerOrder get(String code) {
         return orders.findByCode(code.toUpperCase()).orElseThrow(() -> AppException.notFound("Không tìm thấy đơn " + code));
     }
 
     /** Lọc đơn theo đợt, trạng thái và từ khóa (mã đơn, tên người tặng/nhận/nhận hàng, SĐT, tài khoản đặt). */
-    @Transactional(readOnly = true)
     public List<CustomerOrder> search(Long batchId, String status, String q) {
         List<CustomerOrder> list = batchId == null ? orders.findAllByOrderByCreatedAtDesc() : orders.findByBatchIdOrderByCreatedAtAsc(batchId);
         String key = q == null ? "" : q.trim().toLowerCase();
+        // tìm cả theo SĐT / tên tài khoản đặt đơn
+        Map<Long, Customer> owners = key.isEmpty() ? Map.of() : customers.findAllById(list.stream().map(CustomerOrder::getCustomerId)
+                .filter(Objects::nonNull).distinct().toList()).stream().collect(Collectors.toMap(Customer::getId, c -> c));
         return list.stream()
                 .filter(o -> status == null || status.isBlank() || o.getStatus().name().equals(status))
                 .filter(o -> key.isEmpty() || Stream.of(o.getCode(), o.getGiverName(), o.getRecipientName(), o.getShippingName(), o.getShippingPhone(),
-                                o.getCustomer() == null ? null : o.getCustomer().getPhone(), o.getCustomer() == null ? null : o.getCustomer().getFullName())
+                                phoneOf(owners.get(o.getCustomerId())), nameOf(owners.get(o.getCustomerId())))
                         .anyMatch(s -> s != null && s.toLowerCase().contains(key)))
                 .toList();
     }
 
-    @Transactional
     public CustomerOrder confirmPayment(String code) {
         CustomerOrder o = get(code);
         if (o.getStatus() != OrderStatus.PENDING_PAYMENT)
@@ -135,7 +132,6 @@ public class OrderService {
      * Duyệt đơn: đạt → nội dung APPROVED, đơn đang chờ duyệt chuyển sang chờ thanh toán (khách thấy mã VietQR).
      * Cần sửa → NEEDS_EDIT kèm ghi chú cho khách; đơn chưa trả tiền quay về chờ duyệt để khách sửa.
      */
-    @Transactional
     public CustomerOrder review(String code, boolean approve, String note) {
         CustomerOrder o = get(code);
         OrderStatus s = o.getStatus();
@@ -150,7 +146,6 @@ public class OrderService {
         return orders.save(o);
     }
 
-    @Transactional
     public CustomerOrder setStatus(String code, OrderStatus status, String carrier, String tracking, String note) {
         CustomerOrder o = get(code);
         if (!o.getStatus().next().contains(status))
@@ -165,7 +160,6 @@ public class OrderService {
     }
 
     /** Bốc ngẫu nhiên khô gấu cho mọi đơn đã thanh toán của đợt, xác suất theo tồn kho còn lại. */
-    @Transactional
     public List<CustomerOrder> assignKeychains(Long batchId) {
         List<CustomerOrder> result = new ArrayList<>();
         for (CustomerOrder o : orders.findByBatchIdOrderByCreatedAtAsc(batchId)) {
@@ -186,7 +180,7 @@ public class OrderService {
     // ---------- Kiểm tra & ghi thiết kế ----------
 
     private void requireOpenBatch(CustomerOrder o) {
-        if (!BatchService.isOpen(o.getBatch())) throw AppException.conflict("Đợt đã chốt, không sửa/hủy đơn được nữa");
+        if (o.getBatchId() == null || !BatchService.isOpen(batches.findById(o.getBatchId()).orElse(null))) throw AppException.conflict("Đợt đã chốt, không sửa/hủy đơn được nữa");
     }
 
     private Meme approvedMeme(String slug) {
@@ -195,10 +189,10 @@ public class OrderService {
     }
 
     /** Lớp ảnh khách tải lên ("u:{uuid}") phải thuộc chính tài khoản đặt đơn; lớp còn lại phải là meme đang bán. */
-    private void checkLayerImage(String slug, Customer owner) {
+    private void checkLayerImage(String slug, Long ownerId) {
         if (CustomImage.isUploadSlug(slug)) {
             boolean ok = images.findByUuid(slug.substring(CustomImage.SLUG_PREFIX.length()))
-                    .filter(i -> owner != null && i.getCustomerId().equals(owner.getId())).isPresent();
+                    .filter(i -> ownerId != null && ownerId.equals(i.getCustomerId())).isPresent();
             if (!ok) throw AppException.invalid("Ảnh tải lên không hợp lệ, hãy tải lại ảnh");
         } else approvedMeme(slug);
     }
@@ -212,7 +206,7 @@ public class OrderService {
         List<Layer> layers = l.layers() == null ? List.of() : l.layers();
         if (layers.size() > MAX_LAYERS) throw AppException.invalid("Áo tối đa " + MAX_LAYERS + " meme/ảnh");
         for (Layer x : layers) {
-            checkLayerImage(x.slug(), o.getCustomer());
+            checkLayerImage(x.slug(), o.getCustomerId());
             if (!in01(x.x()) || !in01(x.y()) || x.w() <= 0 || x.w() > 1) throw AppException.invalid("Meme nằm ngoài vùng in");
         }
         if (l.text() != null && (!in01(l.text().x()) || !in01(l.text().y()) || l.text().s() <= 0 || l.text().s() > 0.2))
@@ -264,6 +258,9 @@ public class OrderService {
             if (!orders.existsByCode(sb.toString())) return sb.toString();
         }
     }
+
+    private static String phoneOf(Customer c) { return c == null ? null : c.getPhone(); }
+    private static String nameOf(Customer c) { return c == null ? null : c.getFullName(); }
 
     private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }
 }

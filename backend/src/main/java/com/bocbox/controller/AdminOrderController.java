@@ -4,6 +4,7 @@ import com.bocbox.dto.request.ReviewRequest;
 import com.bocbox.dto.request.StatusRequest;
 import com.bocbox.dto.response.OrderResponse;
 import com.bocbox.mapper.OrderMapper;
+import com.bocbox.mapper.OrderResponseAssembler;
 import com.bocbox.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -16,28 +17,30 @@ import java.util.List;
 public class AdminOrderController {
     private final OrderService orders;
 
-    public AdminOrderController(OrderService orders) { this.orders = orders; }
+    private final OrderResponseAssembler assembler;
+
+    public AdminOrderController(OrderResponseAssembler assembler, OrderService orders) { this.assembler = assembler; this.orders = orders; }
 
     /** Lọc theo đợt, trạng thái và từ khóa (mã đơn, tên, số điện thoại). */
     @GetMapping
     public List<OrderResponse> list(@RequestParam(required = false) Long batchId, @RequestParam(required = false) String status,
                                     @RequestParam(required = false) String q) {
-        return orders.search(batchId, status, q).stream().map(OrderMapper::toResponse).toList();
+        return assembler.many(orders.search(batchId, status, q));
     }
 
     @GetMapping("/{code}")
-    public OrderResponse get(@PathVariable String code) { return OrderMapper.toResponse(orders.get(code)); }
+    public OrderResponse get(@PathVariable String code) { return assembler.one(orders.get(code)); }
 
     @PostMapping("/{code}/confirm-payment")
-    public OrderResponse confirmPayment(@PathVariable String code) { return OrderMapper.toResponse(orders.confirmPayment(code)); }
+    public OrderResponse confirmPayment(@PathVariable String code) { return assembler.one(orders.confirmPayment(code)); }
 
     @PatchMapping("/{code}/content-review")
     public OrderResponse review(@PathVariable String code, @RequestBody ReviewRequest r) {
-        return OrderMapper.toResponse(orders.review(code, r.approve(), r.note()));
+        return assembler.one(orders.review(code, r.approve(), r.note()));
     }
 
     @PatchMapping("/{code}/status")
     public OrderResponse status(@PathVariable String code, @Valid @RequestBody StatusRequest r) {
-        return OrderMapper.toResponse(orders.setStatus(code, r.status(), r.carrier(), r.trackingCode(), r.note()));
+        return assembler.one(orders.setStatus(code, r.status(), r.carrier(), r.trackingCode(), r.note()));
     }
 }

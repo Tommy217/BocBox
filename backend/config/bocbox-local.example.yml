@@ -1,9 +1,9 @@
 # Chép file này thành config/bocbox-local.yml rồi điền giá trị thật. File bocbox-local.yml không được commit.
 spring:
-  datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=bocbox;encrypt=true;trustServerCertificate=true
-    username: bocbox_app
-    password: <trùng @AppPassword trong sql/bocbox-full.sql>
+  data:
+    mongodb:
+      # Atlas: mongodb+srv://<user>:<mật khẩu>@<cluster>.mongodb.net/bocbox?retryWrites=true&w=majority
+      uri: mongodb://localhost:27017/bocbox
 bocbox:
   jwt:
     secret: <chuỗi ngẫu nhiên ít nhất 32 ký tự>

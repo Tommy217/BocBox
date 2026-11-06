@@ -1,7 +1,7 @@
 package com.bocbox.repository;
 
 import com.bocbox.entity.SpyFormTemplate;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface SpyFormTemplateRepository extends JpaRepository<SpyFormTemplate, Long> {
+public interface SpyFormTemplateRepository extends MongoRepository<SpyFormTemplate, Long> {
 }

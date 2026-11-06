@@ -1,50 +1,25 @@
 # Chạy cả hệ thống: docker compose up -d --build
-# Web: http://localhost:3000 · API: http://localhost:8080/api/v1 · SQL Server: localhost,1434 (sa)
-# Đổi mật khẩu/secret: tạo file .env cạnh file này (SA_PASSWORD=..., JWT_SECRET=...), không commit.
+# Web: http://localhost:3000 · API: http://localhost:8080/api/v1 · MongoDB: mongodb://localhost:27017
+# Đổi JWT secret: tạo file .env cạnh file này (JWT_SECRET=...), không commit.
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: mssql_db
+  mongo:
+    image: mongo:7
+    container_name: bocbox_mongo
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${SA_PASSWORD:-YourStrong@Password123}  # Mật khẩu tài khoản sa
       - TZ=Asia/Ho_Chi_Minh
     ports:
-      - "1434:1433"   # máy đã cài SQL Server chiếm 1433 nên map ra 1434 (SSMS: localhost,1434)
+      - "27017:27017"   # MongoDB Compass: mongodb://localhost:27017
     volumes:
-      - mssql-data:/var/opt/mssql
-    healthcheck:      # backend chỉ khởi động khi SQL Server nhận kết nối thật
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b -o /dev/null"]
+      - mongo-data:/data/db
+      # Lần đầu (volume trống) mongo tự chạy script này: tạo database bocbox + dữ liệu mẫu.
+      # Muốn dựng lại từ đầu: docker compose down -v rồi up lại.
+      - ./backend/db/bocbox-full.mongodb.js:/docker-entrypoint-initdb.d/bocbox-full.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 20s
-    networks:
-      - app-network
-
-  # Chạy backend/sql/bocbox-full.sql một lần khi chưa có database bocbox (volume mới).
-  # Muốn dựng lại DB từ đầu: docker compose down -v rồi up lại.
-  db-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: mssql_db_init
-    depends_on:
-      sqlserver:
-        condition: service_healthy
-    environment:
-      - MSSQL_SA_PASSWORD=${SA_PASSWORD:-YourStrong@Password123}
-    volumes:
-      - ./backend/sql:/sql:ro
-    entrypoint: ["/bin/bash", "-c"]
-    command:
-      - |
-        S="/opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P $$MSSQL_SA_PASSWORD -C"
-        if [ "$$($$S -h -1 -W -Q "SET NOCOUNT ON; SELECT DB_ID('bocbox')" | tr -d '[:space:]')" = "NULL" ]; then
-          echo "Chua co database bocbox -> chay bocbox-full.sql"
-          $$S -f 65001 -b -i /sql/bocbox-full.sql
-        else
-          echo "Database bocbox da co, bo qua"
-        fi
-    restart: "no"
+      start_period: 15s
     networks:
       - app-network
 
@@ -55,13 +30,11 @@ services:
     ports:
       - "8080:8080"   # tắt backend chạy trong IntelliJ trước, kẻo trùng cổng
     depends_on:
-      db-init:
-        condition: service_completed_successfully
+      mongo:
+        condition: service_healthy
     environment:
-      # Kết nối trực tiếp tới container 'sqlserver' (cổng trong mạng docker vẫn là 1433)
-      - DB_URL=jdbc:sqlserver://sqlserver:1433;databaseName=bocbox;encrypt=true;trustServerCertificate=true
-      - DB_USER=sa
-      - DB_PASSWORD=${SA_PASSWORD:-YourStrong@Password123}
+      # Kết nối tới container 'mongo' trong mạng docker
+      - MONGODB_URI=mongodb://mongo:27017/bocbox
       - JWT_SECRET=${JWT_SECRET:-YourSuperSecretKeyWithAtLeast32CharactersLong!}
       - CORS_ORIGINS=http://localhost:3000
       - TZ=Asia/Ho_Chi_Minh
@@ -87,4 +60,4 @@ networks:
     driver: bridge
 
 volumes:
-  mssql-data:
+  mongo-data:

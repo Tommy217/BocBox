@@ -5,7 +5,6 @@ import com.bocbox.entity.enums.BatchStatus;
 import com.bocbox.repository.BatchRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -22,7 +21,6 @@ public class BatchService {
     public BatchService(BatchRepository batches) { this.batches = batches; }
 
     /** Đợt đang nhận đơn. Đợt mở đã quá giờ đóng (ví dụ server tắt lúc 23:59 Chủ nhật) thì đóng luôn và mở đợt của tuần hiện tại. */
-    @Transactional
     public Batch currentOpenBatch() {
         Batch b = batches.findFirstByStatusOrderByOpenAtDesc(BatchStatus.OPEN).orElse(null);
         if (b != null && LocalDateTime.now(VN).isAfter(b.getCloseAt())) {
@@ -34,13 +32,11 @@ public class BatchService {
     }
 
     /** Mọi đợt, mới nhất trước (đảm bảo luôn có đợt đang mở). */
-    @Transactional
     public List<Batch> allNewestFirst() {
         currentOpenBatch();
         return batches.findAllByOrderByOpenAtDesc();
     }
 
-    @Transactional
     public Batch createBatchFor(LocalDate day) {
         LocalDate monday = day.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
@@ -58,7 +54,6 @@ public class BatchService {
     }
 
     /** Admin bấm tay: đóng đợt hiện tại ngay và mở đợt tuần sau. */
-    @Transactional
     public Batch closeCurrentAndOpenNext() {
         Batch current = currentOpenBatch();
         current.setStatus(BatchStatus.CLOSED);

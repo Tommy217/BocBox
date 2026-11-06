@@ -6,29 +6,26 @@ Box quà meme: 1 áo tự thiết kế (hoặc mẫu shop) + 1 khô gấu random
 |---|---|---|
 | Frontend | React 18 + Vite + TypeScript, Framer Motion, Phosphor Icons | `frontend/` |
 | Backend | Java 21, Spring Boot 3.3 (Web, Data JPA, Validation, Scheduling, Security + JWT) | `backend/` |
-| Database | SQL Server (localhost:1433, database `bocbox`) | `backend/sql/` |
+| Database | MongoDB (Atlas khi deploy, `mongodb://localhost:27017/bocbox` trên máy), database `bocbox` | `backend/db/` |
 
 ## Cài lần đầu (máy mới)
 
-1. Tạo database, tài khoản ứng dụng, toàn bộ bảng và dữ liệu bằng **một script tổng** `backend/sql/bocbox-full.sql`:
-   - SSMS: đăng nhập `sa`, mở file, sửa `@AppPassword` (mục 2), bấm Execute.
-   - Hoặc PowerShell:
+1. Tạo database `bocbox` với toàn bộ collection, index và dữ liệu bằng **một script tổng** `backend/db/bocbox-full.mongodb.js`:
+   - MongoDB Compass: kết nối tới Atlas (hoặc `mongodb://localhost:27017`), mở tab **MONGOSH** ở cuối màn hình, dán cả file rồi Enter.
+   - Hoặc mongosh:
 
    ```powershell
-   cd backend
-   sqlcmd -S localhost -U sa -P <mật khẩu sa> -C -f 65001 -i sql\bocbox-full.sql
+   mongosh "<chuỗi kết nối, không cần tên database>" --file backend\db\bocbox-full.mongodb.js
    ```
 
    Script xóa database `bocbox` cũ rồi tạo lại từ đầu: 20 meme, 4 màu áo, bảng size, 3 form ngụy trang, 6 mẫu khô gấu, 2 tài khoản quản trị `admin` / `nhanvien` (mật khẩu `Bocbox@2026`, đăng nhập xong đổi ngay), 24 tài khoản khách mẫu `0901000001`…`0901000024` (mật khẩu `Bocbox@2026`; `0901000002` có đơn đã duyệt chờ thanh toán, `0901000020` có đơn bị báo cần sửa), 5 đợt (4 tuần trước + tuần đang mở) và 55 đơn mẫu. Muốn về dữ liệu ban đầu thì chạy lại script này (tắt backend trước).
 
-   SQL Express thường là `localhost\SQLEXPRESS`; bật TCP/IP (cổng 1433) trong SQL Server Configuration Manager.
-
-2. Chép `backend/config/bocbox-local.example.yml` thành `backend/config/bocbox-local.yml` và điền mật khẩu DB (trùng `@AppPassword` trong script), JWT secret (≥ 32 ký tự). File này **không commit**.
+2. Chép `backend/config/bocbox-local.example.yml` thành `backend/config/bocbox-local.yml` và điền chuỗi kết nối MongoDB (`.../bocbox?...`), JWT secret (≥ 32 ký tự). File này **không commit**.
 
 ## Chạy hằng ngày – 2 cửa sổ PowerShell
 
 ```powershell
-# Cửa sổ 1: backend (không tự tạo bảng/nạp dữ liệu: DB phải chạy bocbox-full.sql trước)
+# Cửa sổ 1: backend (không tự nạp dữ liệu: phải chạy bocbox-full.mongodb.js trước)
 cd backend
 mvn spring-boot:run          # hoặc Run BocboxApplication trong IntelliJ (working directory = backend)
 
@@ -63,4 +60,4 @@ Quản trị (JWT): `GET /admin/batches` · `POST /admin/batches/close-current` 
 - Thay số tài khoản ngân hàng thật (`BANK_ID`, `BANK_ACCOUNT`, `BANK_ACCOUNT_NAME`).
 - Google Form thật: kịch bản 1 và 2 đã gắn link (01/11/2026), kịch bản 3 "CLB bình chọn meme" còn thiếu (cột `google_form_copy_url` trong `spy_form_templates`).
 - Ảnh meme đang lấy từ template Imgflip (chỉ cho demo môn học); bán thật phải xem lại bản quyền. Ảnh hộp/bao bì là ảnh tham khảo từ Lazada.
-- Thêm Flyway thay cho script tay `bocbox-full.sql`, email xác nhận, nhắc dịp tặng.
+- Script migration thay cho script tay `bocbox-full.mongodb.js`, email xác nhận, nhắc dịp tặng.

@@ -1,85 +1,64 @@
 package com.bocbox.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import com.bocbox.entity.enums.ContentStatus;
 import com.bocbox.entity.enums.OrderStatus;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** Đơn hàng: 1 box = 1 áo tự thiết kế + 1 khô gấu random. Thiết kế lưu dạng cấu hình để render lại file in. Luồng trạng thái: {@link OrderStatus}. */
-@Entity
-@Table(name = "orders")
-public class CustomerOrder {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+/**
+ * Đơn hàng: 1 box = 1 áo tự thiết kế + 1 khô gấu random. Thiết kế lưu dạng cấu hình để render lại file in.
+ * Liên kết tới đợt và tài khoản khách bằng id (batchId, customerId). Luồng trạng thái: {@link OrderStatus}.
+ */
+@Document(collection = "orders")
+public class CustomerOrder implements SequencedEntity {
+    @Id
     private Long id;
-    @Column(nullable = false, unique = true, length = 20)
+    // mã đơn BB + yyMMdd + 4 ký tự, duy nhất
     private String code;
     private LocalDateTime createdAt;
-    @Enumerated(EnumType.STRING) @Column(length = 30)
     private OrderStatus status = OrderStatus.PENDING_APPROVAL;
-    @Enumerated(EnumType.STRING) @Column(length = 20)
     private ContentStatus contentStatus = ContentStatus.PENDING_REVIEW;
-    @Column(precision = 12, scale = 0)
-    private BigDecimal price;
+    /** Giá (đồng). */
+    private long price;
     // người tặng / người nhận / form ngụy trang đã dùng
-    @Column(length = 100)
     private String giverName;
-    @Column(length = 100)
     private String recipientName;
     private Long spyTemplateId;
     // thiết kế áo; memeSlug = lớp đầu tiên (slug meme hoặc u:{uuid}), null = áo chỉ có chữ
-    @Column(length = 50)
     private String memeSlug;
-    @Column(length = 50)
     private String colorName;
-    @Column(length = 7)
     private String colorHex;
-    @Column(length = 5)
     private String sizeCode;
-    @Column(length = 40)
     private String textLine1;
-    @Column(length = 40)
     private String textLine2;
-    @Column(length = 40)
     private String font;
-    @Column(name = "print_position", length = 10)
+    /** CHEST | CENTER */
     private String position;
-    /** Bố cục tự do: {"layers":[{slug,x,y,w}],"text":{x,y,s}}, tọa độ theo tỉ lệ vùng in A4. Null = đơn cũ. */
-    @Column(length = 2000)
+    /** Bố cục tự do: {"layers":[{slug,x,y,w}],"text":{x,y,s}}, tọa độ theo tỉ lệ vùng in A4. */
     private String layoutJson;
     // thiệp kèm hộp: SPY / MEME / PLAIN + lời nhắn
-    @Column(length = 10)
     private String cardStyle;
-    @Column(length = 400)
     private String cardMessage;
     // giao hàng
-    @Column(length = 100)
     private String shippingName;
-    @Column(length = 20)
     private String shippingPhone;
-    @Column(length = 300)
     private String shippingAddress;
-    @Column(length = 120)
     private String email;
-    @ManyToOne(fetch = FetchType.EAGER)
-    private Batch batch;
+    /** Đợt pre-order chứa đơn. */
+    private Long batchId;
     /** Tài khoản khách đặt đơn (null với đơn tạo trước khi có tài khoản khách). */
-    @ManyToOne(fetch = FetchType.EAGER)
-    private Customer customer;
-    @Column(length = 100)
+    private Long customerId;
     private String keychainDesign;
-    @Column(length = 30)
     private String carrier;
-    @Column(length = 50)
     private String trackingCode;
-    @Column(length = 300)
     private String reviewNote;
 
     /** Đơn thuộc tài khoản khách này. */
-    public boolean belongsTo(Customer c) { return customer != null && c != null && customer.getId().equals(c.getId()); }
+    public boolean belongsTo(Customer c) { return customerId != null && c != null && customerId.equals(c.getId()); }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    @Override public Long getId() { return id; }
+    @Override public void setId(Long id) { this.id = id; }
     public String getCode() { return code; }
     public void setCode(String code) { this.code = code; }
     public LocalDateTime getCreatedAt() { return createdAt; }
@@ -88,8 +67,8 @@ public class CustomerOrder {
     public void setStatus(OrderStatus status) { this.status = status; }
     public ContentStatus getContentStatus() { return contentStatus; }
     public void setContentStatus(ContentStatus contentStatus) { this.contentStatus = contentStatus; }
-    public BigDecimal getPrice() { return price; }
-    public void setPrice(BigDecimal price) { this.price = price; }
+    public long getPrice() { return price; }
+    public void setPrice(long price) { this.price = price; }
     public String getGiverName() { return giverName; }
     public void setGiverName(String giverName) { this.giverName = giverName; }
     public String getRecipientName() { return recipientName; }
@@ -126,10 +105,10 @@ public class CustomerOrder {
     public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    public Batch getBatch() { return batch; }
-    public void setBatch(Batch batch) { this.batch = batch; }
-    public Customer getCustomer() { return customer; }
-    public void setCustomer(Customer customer) { this.customer = customer; }
+    public Long getBatchId() { return batchId; }
+    public void setBatchId(Long batchId) { this.batchId = batchId; }
+    public Long getCustomerId() { return customerId; }
+    public void setCustomerId(Long customerId) { this.customerId = customerId; }
     public String getKeychainDesign() { return keychainDesign; }
     public void setKeychainDesign(String keychainDesign) { this.keychainDesign = keychainDesign; }
     public String getCarrier() { return carrier; }

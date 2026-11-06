@@ -11,7 +11,6 @@ import com.bocbox.entity.enums.OrderStatus;
 import com.bocbox.repository.BatchRepository;
 import com.bocbox.repository.CustomerOrderRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 
 /** Số liệu cho quản trị: tổng hợp một đợt gửi xưởng và báo cáo doanh thu. */
 @Service
-@Transactional(readOnly = true)
 public class ReportService {
     private final CustomerOrderRepository orders;
     private final BatchRepository batches;
@@ -30,7 +28,7 @@ public class ReportService {
         this.orders = orders; this.batches = batches; this.cfg = props.report();
     }
 
-    private static long revenue(List<CustomerOrder> l) { return l.stream().mapToLong(o -> o.getPrice().longValue()).sum(); }
+    private static long revenue(List<CustomerOrder> l) { return l.stream().mapToLong(o -> o.getPrice()).sum(); }
 
     /** Bảng gửi xưởng: số áo theo màu × size (chỉ đơn đã thanh toán), kèm số đơn còn chờ duyệt. */
     public BatchSummaryResponse batchSummary(Long batchId) {
@@ -52,8 +50,8 @@ public class ReportService {
         Map<String, Long> memeCount = paid.stream()
                 .filter(o -> o.getMemeSlug() != null && !CustomImage.isUploadSlug(o.getMemeSlug()))
                 .collect(Collectors.groupingBy(CustomerOrder::getMemeSlug, Collectors.counting()));
-        Map<Long, List<CustomerOrder>> byBatch = all.stream().filter(o -> o.getBatch() != null)
-                .collect(Collectors.groupingBy(o -> o.getBatch().getId()));
+        Map<Long, List<CustomerOrder>> byBatch = all.stream().filter(o -> o.getBatchId() != null)
+                .collect(Collectors.groupingBy(CustomerOrder::getBatchId));
         List<BatchStatResponse> stats = batches.findAllByOrderByOpenAtDesc().stream().map(b -> {
             List<CustomerOrder> l = byBatch.getOrDefault(b.getId(), List.of());
             List<CustomerOrder> p = l.stream().filter(o -> o.getStatus().isPaid()).toList();
