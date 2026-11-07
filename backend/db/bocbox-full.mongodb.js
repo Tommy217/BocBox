@@ -207,11 +207,18 @@ const ORDERS = [
   [5, 823, "F94V", 6, {"status": "PAID", "contentStatus": "APPROVED", "giverName": "Phương", "recipientName": "Đức", "memeSlug": "disaster-girl", "colorName": "Be", "colorHex": "#E8DCC4", "sizeCode": "XL", "textLine1": "Tớ không làm gì cả", "font": "Baloo 2", "position": "CENTER", "layoutJson": "{\"layers\":[{\"slug\":\"disaster-girl\",\"x\":0.5,\"y\":0.36,\"w\":0.9}],\"text\":{\"x\":0.5,\"y\":0.86,\"s\":0.068}}", "cardStyle": "MEME", "cardMessage": "Sinh nhật vui vẻ nha đồ phá hoại!", "shippingName": "Phương (người tặng)", "shippingPhone": "0358536491", "shippingAddress": "Tòa B2 Vinhomes Smart City, Tây Mỗ, Nam Từ Liêm, Hà Nội", "email": "phuong96@gmail.com"}, 2],
   [5, 286, "HEF8", 7, {"status": "CANCELLED", "contentStatus": "APPROVED", "giverName": "Tú", "recipientName": "Linh", "memeSlug": "leo-cheers", "colorName": "Đen", "colorHex": "#1F1F1F", "sizeCode": "L", "textLine1": "Chúc mừng", "textLine2": "cậu già thêm 1 tuổi", "font": "Baloo 2", "position": "CENTER", "layoutJson": "{\"layers\":[{\"slug\":\"leo-cheers\",\"x\":0.32,\"y\":0.27,\"w\":0.6},{\"slug\":\"laughing-leo\",\"x\":0.68,\"y\":0.56,\"w\":0.6}],\"text\":{\"x\":0.5,\"y\":0.86,\"s\":0.068}}", "cardStyle": "MEME", "cardMessage": "Tuổi mới chúc cậu ăn không béo, ngủ đủ 8 tiếng và mãi là bạn thân của tớ.", "shippingName": "Hoàng Khánh Linh", "shippingPhone": "0926887465", "shippingAddress": "Số 18 ngõ 165 Cầu Giấy, Dịch Vọng, Cầu Giấy, Hà Nội", "email": "tu84@gmail.com"}, 3]
 ];
+// Giá theo tùy chọn, khớp bocbox.pricing trong application.yml (service/PriceCalculator):
+// 275k gốc, +15k khi áo có 2–4 meme/ảnh, +9k thiệp meme (chỉ khi áo có meme).
+const PRICE = { base: 275000, extraMemes: 15000, memeCard: 9000 };
+function priceOf(info) {
+  const layers = info.layoutJson ? JSON.parse(info.layoutJson).layers.length : (info.memeSlug ? 1 : 0);
+  return PRICE.base + (layers >= 2 ? PRICE.extraMemes : 0) + (info.cardStyle === 'MEME' && layers >= 1 ? PRICE.memeCard : 0);
+}
 target.orders.insertMany(ORDERS.map(([batchId, mins, suffix, customerId, info, spyId], i) => {
   let vn = batchOpen[batchId] + mins * MIN;
   const nowVnMs = nowMs + VN;
   if (vn > nowVnMs) vn = nowVnMs - ((mins % 50) + 1) * MIN;   // đơn của đợt đang mở không nằm sau lúc chạy script
-  return Object.assign({ _id: NumberLong(i + 1), code: 'BB' + yymmdd(vn) + suffix, createdAt: at(vn), price: NumberLong(350000),
+  return Object.assign({ _id: NumberLong(i + 1), code: 'BB' + yymmdd(vn) + suffix, createdAt: at(vn), price: NumberLong(priceOf(info)),
     batchId: NumberLong(batchId), customerId: NumberLong(customerId) }, spyId ? { spyTemplateId: NumberLong(spyId) } : {}, info);
 }));
 
@@ -227,7 +234,19 @@ target.orders.createIndex({ batchId: 1, createdAt: 1 });
 target.orders.createIndex({ customerId: 1, createdAt: -1 });
 
 // 11. Bộ đếm id cho bản ghi mới (backend cấp id = seq + 1)
-const collections = ['memes', 'shirt_colors', 'sizes', 'spy_form_templates', 'keychain_designs', 'staff_users', 'customers', 'custom_images', 'batches', 'orders'];
+// "Mẫu của tôi" (saved_designs): vài mẫu khách 0901000001 và 0901000002 đã lưu, để demo dùng lại thiết kế
+const savedLayout = (layers) => JSON.stringify({ layers, text: { x: 0.5, y: 0.86, s: 0.068 } });
+target.saved_designs.insertMany([
+  { _id: NumberLong(1), customerId: NumberLong(1), name: 'Áo deadline cho Lan', memeSlug: 'surprised-pikachu', colorHex: '#FFFFFF', textLine1: 'Deadline là hôm nay', textLine2: '(tớ vẫn ổn)', font: 'Baloo 2',
+    layoutJson: savedLayout([{ slug: 'surprised-pikachu', x: 0.32, y: 0.27, w: 0.6 }, { slug: 'waiting-skeleton', x: 0.68, y: 0.56, w: 0.6 }]), createdAt: at(monVn - 9 * DAY + 20 * 3600 * 1000) },
+  { _id: NumberLong(2), customerId: NumberLong(1), name: 'Trà chiều hóng chuyện', memeSlug: 'kermit-tea', colorHex: '#E8DCC4', textLine1: 'Chuyện của cậu', textLine2: 'tớ chỉ uống trà', font: 'Patrick Hand',
+    layoutJson: savedLayout([{ slug: 'kermit-tea', x: 0.5, y: 0.36, w: 0.9 }]), createdAt: at(monVn - 2 * DAY + 21 * 3600 * 1000) },
+  { _id: NumberLong(3), customerId: NumberLong(2), name: 'Sinh nhật Trang', memeSlug: 'leo-cheers', colorHex: '#1F1F1F', textLine1: 'Chúc mừng', textLine2: 'cậu già thêm 1 tuổi', font: 'Baloo 2',
+    layoutJson: savedLayout([{ slug: 'leo-cheers', x: 0.5, y: 0.36, w: 0.9 }]), createdAt: at(monVn - 5 * DAY + 19 * 3600 * 1000) },
+]);
+target.saved_designs.createIndex({ customerId: 1, createdAt: -1 });
+
+const collections = ['memes', 'shirt_colors', 'sizes', 'spy_form_templates', 'keychain_designs', 'staff_users', 'customers', 'custom_images', 'batches', 'orders', 'saved_designs'];
 target.counters.insertMany(collections.map((c) => ({ _id: c, seq: NumberLong(target.getCollection(c).countDocuments()) })));
 
 // Kiểm tra nhanh

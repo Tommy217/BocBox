@@ -7,6 +7,7 @@ import { TeePreview } from '../components/Canvases';
 import { AuthorTag } from '../components/Cards';
 import { Icon, SectionTitle } from '../components/Fun';
 import { vnd } from '../components/ui';
+import { priceOf, usePricing } from '../lib/pricing';
 
 /** Ảnh hộp dựng bằng CSS: nền màu theo chủ đề, khay kraft lót giấy rơm, áo đã in, khô gấu bí mật, tag. */
 function BoxShot({ box }: { box: ReadyBox }) {
@@ -27,6 +28,7 @@ function BoxShot({ box }: { box: ReadyBox }) {
 
 export default function Shop() {
   const nav = useNavigate();
+  const pricing = usePricing();
   const [mood, setMood] = useState<(typeof MOODS)[number]>('Tất cả');
   const list = mood === 'Tất cả' ? READY_BOXES : READY_BOXES.filter((b) => b.mood === mood);
 
@@ -48,14 +50,14 @@ export default function Shop() {
             <BoxShot box={b} />
             <div className="box-info">
               <h3>{b.name}</h3>
-              <span className="box-price">{vnd(350000)}</span>
+              <span className="box-price">{vnd(priceOf(pricing, b.design.layers?.length ?? 1, 'SPY'))}</span>
               <button type="button" className="box-buy" onClick={() => choose(b)}>Chọn hộp này <span aria-hidden>→</span></button>
             </div>
           </article>
         ))}
       </div>
       <p className="center muted small" style={{ marginTop: 28 }}>
-        <Icon name="sparkles" size={18} /> Mọi hộp gồm 1 áo in sẵn + 1 khô gấu random trong 6 mẫu + author tag + thiệp điệp viên. <Link to="/">Xem hộp thật trông thế nào</Link>.
+        <Icon name="sparkles" size={18} /> Mọi hộp gồm 1 áo in sẵn + 1 khô gấu random trong 6 mẫu + author tag + thiệp điệp viên. Đổi sang thiệp meme in màu cộng thêm {vnd(pricing.memeCard)}. <Link to="/">Xem hộp thật trông thế nào</Link>.
       </p>
     </div>
   );

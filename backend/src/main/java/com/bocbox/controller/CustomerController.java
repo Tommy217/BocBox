@@ -5,6 +5,7 @@ import com.bocbox.dto.response.*;
 import com.bocbox.entity.CustomImage;
 import com.bocbox.entity.Customer;
 import com.bocbox.mapper.AccountMapper;
+import com.bocbox.mapper.DesignMapper;
 import com.bocbox.mapper.OrderMapper;
 import com.bocbox.mapper.OrderResponseAssembler;
 import com.bocbox.security.JwtTokenService;
@@ -12,6 +13,7 @@ import com.bocbox.service.CustomerAccountService;
 import com.bocbox.service.ImageService;
 import com.bocbox.service.OrderService;
 import com.bocbox.service.PaymentService;
+import com.bocbox.service.SavedDesignService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -23,7 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 /**
- * Khu của khách: đăng ký / đăng nhập bằng SĐT + mật khẩu, "Đơn của tôi", đặt / sửa / hủy đơn, mã VietQR, tải ảnh lên để in.
+ * Khu của khách: đăng ký / đăng nhập bằng SĐT + mật khẩu, "Đơn của tôi", "Mẫu của tôi", đặt / sửa / hủy đơn, mã VietQR, tải ảnh lên để in.
  * Khách vãng lai xem và thiết kế tự do; mọi API dưới /customer (trừ register, login) cần token ROLE_CUSTOMER.
  */
 @RestController
@@ -34,13 +36,14 @@ public class CustomerController {
     private final PaymentService payment;
     private final ImageService images;
     private final JwtTokenService tokens;
+    private final SavedDesignService designs;
 
     private final OrderResponseAssembler assembler;
 
     public CustomerController(OrderResponseAssembler assembler, CustomerAccountService accounts, OrderService orders, PaymentService payment,
-                              ImageService images, JwtTokenService tokens) {
+                              ImageService images, JwtTokenService tokens, SavedDesignService designs) {
         this.assembler = assembler;
-        this.accounts = accounts; this.orders = orders; this.payment = payment; this.images = images; this.tokens = tokens;
+        this.accounts = accounts; this.orders = orders; this.payment = payment; this.images = images; this.tokens = tokens; this.designs = designs;
     }
 
     // ---------- tài khoản ----------
@@ -106,6 +109,22 @@ public class CustomerController {
         CustomImage img = images.upload(accounts.current(t), file);
         return new UploadResponse(img.slug(), UploadController.PATH + img.getUuid(), img.getContentType(), img.getSizeBytes());
     }
+
+    // ---------- mẫu của tôi ----------
+    @GetMapping("/designs")
+    public List<SavedDesignResponse> myDesigns(@AuthenticationPrincipal Jwt t) {
+        return designs.list(accounts.current(t)).stream().map(DesignMapper::toResponse).toList();
+    }
+
+    @PostMapping("/designs")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SavedDesignResponse saveDesign(@AuthenticationPrincipal Jwt t, @Valid @RequestBody SaveDesignRequest r) {
+        return DesignMapper.toResponse(designs.save(accounts.current(t), r));
+    }
+
+    @DeleteMapping("/designs/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteDesign(@AuthenticationPrincipal Jwt t, @PathVariable Long id) { designs.delete(accounts.current(t), id); }
 
     private CustomerLoginResponse loginResponse(Customer c) {
         JwtTokenService.IssuedToken t = tokens.issueFor(c);

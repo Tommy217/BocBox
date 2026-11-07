@@ -21,7 +21,12 @@ spring:
       max-request-size: 5MB
 # Toàn bộ mục bocbox.* được đọc vào config/BocboxProperties.java
 bocbox:
-  price: 350000
+  # Giá box theo tùy chọn in (đồng): 275k gốc → tối đa 299k. Đổi ở đây thì sửa cả frontend/src/lib/pricing.ts (giá dự phòng)
+  # và PRICE trong db/bocbox-full.mongodb.js.
+  pricing:
+    base: 275000                    # áo 1 meme/ảnh (hoặc chỉ chữ) + khô gấu + author tag + thiệp điệp viên/trơn
+    extra-memes: 15000              # cộng 1 lần khi áo có 2–4 meme/ảnh
+    meme-card: 9000                 # thiệp meme in màu (thay thiệp điệp viên/trơn)
   cors-origins: ${CORS_ORIGINS:http://localhost:5173}
   payment:
     bank-id: ${BANK_ID:970436}          # mã BIN ngân hàng (ví dụ Vietcombank) - thay bằng tài khoản thật
@@ -35,8 +40,8 @@ bocbox:
     max-failures: 5                 # sai quá số lần này thì khóa đăng nhập tạm thời
     lock-minutes: 15
   report:
-    break-even-boxes: 21            # mốc hòa vốn mỗi tháng (box)
-    gross-profit-per-box: 145000    # lãi gộp ước tính mỗi box (đồng)
+    unit-cost: 205000               # giá vốn mỗi box (áo + in DTF A4 + khô gấu + hộp, giấy rơm, tag, thiệp)
+    fixed-cost-per-month: 3045000   # chi phí cố định mỗi tháng (= 21 box × 145k lãi gộp ở mốc 350k cũ)
   # Mỗi request /api/** in 1 dòng: GET /api/v1/memes -> 200 (12 ms) [token]. Đặt false để tắt.
   request-log: ${REQUEST_LOG:true}
 logging:

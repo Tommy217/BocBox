@@ -11,6 +11,7 @@ import { MemePhoto, TeeEditor } from '../components/Canvases';
 import { AuthorTag, CARD_STYLES, GiftCard } from '../components/Cards';
 import { dmy, dmyhm, vnd } from '../components/ui';
 import { Icon, party } from '../components/Fun';
+import { k, priceLines, usePricing } from '../lib/pricing';
 
 const STEPS = [
   { icon: 'sparkles', label: 'Meme & ảnh' },
@@ -117,6 +118,9 @@ export default function Builder() {
   const colorName = colors.find((c) => c.hex === design.colorHex)?.name ?? '';
   const upd = (p: Partial<Design>) => setDesign((d) => ({ ...d, ...p }));
   const { layers, text } = withLayout(design);
+  const pricing = usePricing();
+  const lines = priceLines(pricing, layers.length, cardStyle);
+  const total = lines.reduce((s, l) => s + l.amount, 0);
   const memeName = (slug: string) => (isUserImage(slug) ? 'Ảnh của bạn' : memes.find((m) => m.slug === slug)?.name ?? slug);
   const selLayer = typeof sel === 'number' ? layers[sel] : undefined;
   const setLayers = (ls: MemeLayer[]) => upd({ layers: ls, memeSlug: ls[0]?.slug ?? '' });
@@ -167,6 +171,35 @@ export default function Builder() {
     if (step < STEPS.length - 1) { setStep(step + 1); return; }
     submit();
   }
+  /** Gửi ảnh tự tải lên (slug "local:") lên server, đổi thành slug "u:"; dùng chung cho đặt hộp và lưu mẫu. */
+  async function uploadLocalImages(): Promise<Design> {
+    const map: Record<string, string> = {};
+    for (const l of layers) {
+      if (!l.slug.startsWith(LOCAL_PREFIX) || map[l.slug]) continue;
+      const blob = await (await fetch(memeSrc(l.slug))).blob();
+      map[l.slug] = (await api.customer.upload(blob, `anh-ao.${blob.type.split('/')[1] ?? 'png'}`)).slug;
+    }
+    const final: Design = { ...design, layers: layers.map((l) => (map[l.slug] ? { ...l, slug: map[l.slug] } : l)) };
+    if (Object.keys(map).length) setDesign(final); // bấm lại sau lỗi không phải gửi ảnh lần nữa
+    return final;
+  }
+
+  /** Lưu thiết kế áo hiện tại vào "Mẫu của tôi" (cần đăng nhập); không ảnh hưởng nháp hay đơn. */
+  const [saveName, setSaveName] = useState(''), [saving, setSaving] = useState(false), [saveMsg, setSaveMsg] = useState('');
+  async function saveDesign() {
+    setSaveMsg('');
+    if (isBlankDesign(design)) { setSaveMsg('Áo đang trống, thêm meme hoặc chữ rồi hãy lưu.'); return; }
+    if (!(await requireLogin('Đăng nhập để lưu mẫu vào Mẫu của tôi. Thiết kế đang làm vẫn được giữ nguyên.'))) return;
+    setSaving(true);
+    try {
+      const final = await uploadLocalImages();
+      const d = toOrderDesign(final);
+      const name = saveName.trim() || (design.textLine1.trim() || memeName(layers[0]?.slug ?? '') || 'Mẫu áo').slice(0, 40);
+      await api.customer.saveDesign({ name, colorHex: d.colorHex, textLine1: d.textLine1, textLine2: d.textLine2, font: d.font, layoutJson: d.layoutJson });
+      setSaveName(''); setSaveMsg(`Đã lưu “${name}” vào Mẫu của tôi.`);
+    } catch (ex) { setSaveMsg((ex as Error).message); } finally { setSaving(false); }
+  }
+
   /** Bấm đặt: khách vãng lai phải đăng nhập (popup), thiết kế vẫn giữ nguyên; đăng nhập xong đặt tiếp luôn. */
   async function submit() {
     if (isBlankDesign(design)) { setErr('Áo đang trống: thêm ít nhất một meme, ảnh hoặc dòng chữ nhé.'); setStep(0); return; }
@@ -175,15 +208,7 @@ export default function Builder() {
     }
     setBusy(true); setErr('');
     try {
-      // gửi ảnh tự tải lên trước, đổi slug "local:" thành "u:" của server
-      const map: Record<string, string> = {};
-      for (const l of layers) {
-        if (!l.slug.startsWith(LOCAL_PREFIX) || map[l.slug]) continue;
-        const blob = await (await fetch(memeSrc(l.slug))).blob();
-        map[l.slug] = (await api.customer.upload(blob, `anh-ao.${blob.type.split('/')[1] ?? 'png'}`)).slug;
-      }
-      const final: Design = { ...design, layers: layers.map((l) => (map[l.slug] ? { ...l, slug: map[l.slug] } : l)) };
-      if (Object.keys(map).length) setDesign(final); // bấm lại sau lỗi không phải gửi ảnh lần nữa
+      const final = await uploadLocalImages();
       const body = { ...toOrderDesign(final), giverName: giver, recipientName: recipient, spyTemplateId: spyId, sizeCode: size, cardStyle, cardMessage, ...ship };
       const o = editCode ? await api.customer.updateOrder(editCode, body) : await api.customer.createOrder(body);
       if (!editCode) clearDraft();
@@ -203,11 +228,17 @@ export default function Builder() {
           {colors.map((c) => <button type="button" key={c.hex} title={c.name} aria-label={c.name} aria-checked={design.colorHex === c.hex} role="radio"
             className={`swatch ${design.colorHex === c.hex ? 'on' : ''}`} style={{ background: c.hex }} onClick={() => upd({ colorHex: c.hex })} />)}
         </div>
+        <div className="save-design">
+          <input value={saveName} onChange={(e) => setSaveName(e.target.value)} maxLength={40} placeholder="Tên mẫu (vd. Áo sinh nhật Lan)" aria-label="Tên mẫu để lưu" />
+          <button type="button" className="btn small ghost" onClick={saveDesign} disabled={saving}><Icon name="star" size={18} /> {saving ? 'Đang lưu…' : 'Lưu vào Mẫu của tôi'}</button>
+          {saveMsg && <p className="small save-msg">{saveMsg} {saveMsg.startsWith('Đã lưu') && <Link to="/my-designs">Xem Mẫu của tôi</Link>}</p>}
+        </div>
         <dl className="summary">
           <div><dt>Meme</dt><dd>{layers.length ? layers.map((l) => memeName(l.slug)).join(', ') : 'Chưa có'}</dd></div>
           <div><dt>Áo</dt><dd>{colorName} · size {size}</dd></div>
           <div><dt>Vùng in</dt><dd>Mặt trước, khổ A4</dd></div>
-          <div className="total"><dt>Tổng</dt><dd>{vnd(350000)}</dd></div>
+          {lines.map((l, i) => <div key={l.label} className={i ? 'extra' : ''}><dt>{i ? '+ ' : ''}{l.label}</dt><dd>{vnd(l.amount)}</dd></div>)}
+          <div className="total"><dt>Tổng</dt><dd>{vnd(total)}</dd></div>
         </dl>
         <p className="muted small center">{editCode ? `Đang sửa đơn ${editCode}: lưu xong đơn được duyệt lại.` : draftFull ? 'Ảnh lớn quá nên nháp không lưu được trên máy, đừng tải lại trang nhé.' : 'Nháp được lưu tự động trên máy này: sang trang khác xem mẫu rồi quay lại vẫn còn.'}</p>
       </aside>
@@ -217,7 +248,7 @@ export default function Builder() {
         {editing?.note && <p className="callout small"><Icon name="edit" size={20} /> Shop cần bạn sửa: <b>{editing.note}</b></p>}
         {!editCode && resumed.current && (
           <p className="callout small resume">Đang tiếp tục bản thiết kế dở của bạn.
-            <button type="button" className="link-btn" onClick={startOver}>Làm lại từ áo trơn</button> · <Link to="/shop">Xem mẫu có sẵn</Link></p>
+            <button type="button" className="link-btn" onClick={startOver}>Làm lại từ áo trơn</button> · <Link to="/shop">Xem mẫu có sẵn</Link> · <Link to="/my-designs">Mẫu của tôi</Link></p>
         )}
 
         <ol className="stepper">
@@ -234,7 +265,7 @@ export default function Builder() {
 
           {step === 0 && <>
             <div className="layer-bar">
-              <span>Trên áo: <b>{layers.length}/{MAX_LAYERS}</b> meme</span>
+              <span>Trên áo: <b>{layers.length}/{MAX_LAYERS}</b> meme{layers.length >= 2 && <span className="price-chip">+{k(pricing.extraMemes)}</span>}</span>
               <div className="layer-chips">
                 {layers.map((l, i) => (
                   <button type="button" key={i} className={`layer-chip ${sel === i ? 'on' : ''}`} onClick={() => setSel(i)} title={memeName(l.slug)}>
@@ -269,6 +300,7 @@ export default function Builder() {
                 </button>
               ))}
             </div>
+            <p className="muted small"><Icon name="label" size={16} /> Giá {k(pricing.base)} đã gồm 1 meme hoặc ảnh. Thêm meme/ảnh thứ 2 đến thứ {MAX_LAYERS} chỉ cộng <b>{k(pricing.extraMemes)}</b> một lần.</p>
             <p className="muted small">Ảnh tự tải lên được shop duyệt cùng đơn (rõ nét, không vi phạm bản quyền hay nội dung xấu). Nền trong suốt (PNG) in đẹp nhất.</p>
             <div className="meme-grid">
               {memes.map((m) => (
@@ -319,7 +351,7 @@ export default function Builder() {
               <div className="card-styles">
                 {CARD_STYLES.map((c) => (
                   <button type="button" key={c.id} className={`choice card-style ${cardStyle === c.id ? 'on' : ''}`} onClick={() => setCardStyle(c.id)}>
-                    <b>{c.label}</b><span className="small muted">{c.note}</span>
+                    <b>{c.label}{c.id === 'MEME' && <span className="price-chip">{layers.length ? `+${k(pricing.memeCard)}` : 'cần meme trên áo'}</span>}</b><span className="small muted">{c.note}</span>
                   </button>
                 ))}
               </div>
@@ -358,7 +390,7 @@ export default function Builder() {
           {step < STEPS.length - 1
             ? <button className="btn">Tiếp: {STEPS[step + 1].label} →</button>
             : <button className="btn big" disabled={busy || (!!editCode && !editing)}><Icon name="wrapped-gift" size={26} />
-              {busy ? 'Đang gói…' : editCode ? 'Lưu thay đổi & gửi duyệt lại' : customer ? `Bỏ vào hộp · ${vnd(350000)}` : `Đăng nhập & bỏ vào hộp · ${vnd(350000)}`}</button>}
+              {busy ? 'Đang gói…' : editCode ? `Lưu thay đổi & gửi duyệt lại · ${vnd(total)}` : customer ? `Bỏ vào hộp · ${vnd(total)}` : `Đăng nhập & bỏ vào hộp · ${vnd(total)}`}</button>}
         </div>
       </form>
     </div>

@@ -1,16 +1,12 @@
 package com.bocbox.service;
 
-import com.bocbox.config.BocboxProperties;
-import com.bocbox.dto.OrderLayout;
 import com.bocbox.dto.OrderLayout.Layer;
 import com.bocbox.dto.request.CreateOrderRequest;
 import com.bocbox.entity.*;
 import com.bocbox.entity.enums.ContentStatus;
-import com.bocbox.entity.enums.MemeStatus;
 import com.bocbox.entity.enums.OrderStatus;
 import com.bocbox.exception.AppException;
 import com.bocbox.repository.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -26,30 +22,27 @@ import java.util.stream.Stream;
 public class OrderService {
     /** Bỏ 0/O, 1/I/L cho dễ đọc khi khách nhập tay. */
     private static final String CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-    private static final int MAX_LAYERS = 4;
 
     private final CustomerOrderRepository orders;
     private final BatchService batchService;
     private final ContentFilter filter;
     private final KeychainDesignRepository keychains;
     private final ShirtColorRepository colors;
-    private final MemeRepository memes;
     private final SpyFormTemplateRepository spyForms;
-    private final CustomImageRepository images;
-    private final ObjectMapper mapper;
-    private final long price;
+    private final LayoutValidator layouts;
+    private final PriceCalculator prices;
     private final CustomerRepository customers;
     private final BatchRepository batches;
     private final Random random = new Random();
     private final SecureRandom codeRandom = new SecureRandom();
 
     public OrderService(CustomerOrderRepository orders, BatchService batchService, ContentFilter filter,
-                        KeychainDesignRepository keychains, ShirtColorRepository colors, MemeRepository memes,
-                        SpyFormTemplateRepository spyForms, CustomImageRepository images, ObjectMapper mapper,
-                        CustomerRepository customers, BatchRepository batches, BocboxProperties props) {
+                        KeychainDesignRepository keychains, ShirtColorRepository colors,
+                        SpyFormTemplateRepository spyForms, LayoutValidator layouts,
+                        CustomerRepository customers, BatchRepository batches, PriceCalculator prices) {
         this.orders = orders; this.batchService = batchService; this.filter = filter;
-        this.keychains = keychains; this.colors = colors; this.memes = memes; this.spyForms = spyForms; this.images = images;
-        this.mapper = mapper; this.price = props.price();
+        this.keychains = keychains; this.colors = colors; this.spyForms = spyForms;
+        this.layouts = layouts; this.prices = prices;
         this.customers = customers; this.batches = batches;
     }
 
@@ -60,7 +53,6 @@ public class OrderService {
         CustomerOrder o = new CustomerOrder();
         o.setCode(nextCode());
         o.setCreatedAt(LocalDateTime.now(BatchService.VN));
-        o.setPrice(price);
         o.setBatchId(batchService.currentOpenBatch().getId());
         o.setCustomerId(customer.getId());
         o.setStatus(OrderStatus.PENDING_APPROVAL);
@@ -183,45 +175,19 @@ public class OrderService {
         if (o.getBatchId() == null || !BatchService.isOpen(batches.findById(o.getBatchId()).orElse(null))) throw AppException.conflict("Đợt đã chốt, không sửa/hủy đơn được nữa");
     }
 
-    private Meme approvedMeme(String slug) {
-        return memes.findBySlug(slug).filter(m -> m.getStatus() == MemeStatus.APPROVED)
-                .orElseThrow(() -> AppException.invalid("Meme không hợp lệ"));
+    /** Kiểm tra bố cục (xem LayoutValidator) và ghi lại dạng chuẩn; trả về các lớp (rỗng nếu áo chỉ có chữ). */
+    private List<Layer> applyLayout(CustomerOrder o, String json) {
+        LayoutValidator.Checked c = layouts.check(json, o.getCustomerId());
+        o.setLayoutJson(c.json());
+        return c.layers();
     }
-
-    /** Lớp ảnh khách tải lên ("u:{uuid}") phải thuộc chính tài khoản đặt đơn; lớp còn lại phải là meme đang bán. */
-    private void checkLayerImage(String slug, Long ownerId) {
-        if (CustomImage.isUploadSlug(slug)) {
-            boolean ok = images.findByUuid(slug.substring(CustomImage.SLUG_PREFIX.length()))
-                    .filter(i -> ownerId != null && ownerId.equals(i.getCustomerId())).isPresent();
-            if (!ok) throw AppException.invalid("Ảnh tải lên không hợp lệ, hãy tải lại ảnh");
-        } else approvedMeme(slug);
-    }
-
-    /** Kiểm tra bố cục tự do (0–4 lớp meme/ảnh, tọa độ trong vùng in) và ghi lại dạng chuẩn; trả về slug lớp đầu tiên (null nếu áo chỉ có chữ). */
-    private String applyLayout(CustomerOrder o, String json) {
-        if (json == null || json.isBlank()) { o.setLayoutJson(null); return null; }
-        OrderLayout l;
-        try { l = mapper.readValue(json, OrderLayout.class); }
-        catch (Exception e) { throw AppException.invalid("Bố cục áo không hợp lệ"); }
-        List<Layer> layers = l.layers() == null ? List.of() : l.layers();
-        if (layers.size() > MAX_LAYERS) throw AppException.invalid("Áo tối đa " + MAX_LAYERS + " meme/ảnh");
-        for (Layer x : layers) {
-            checkLayerImage(x.slug(), o.getCustomerId());
-            if (!in01(x.x()) || !in01(x.y()) || x.w() <= 0 || x.w() > 1) throw AppException.invalid("Meme nằm ngoài vùng in");
-        }
-        if (l.text() != null && (!in01(l.text().x()) || !in01(l.text().y()) || l.text().s() <= 0 || l.text().s() > 0.2))
-            throw AppException.invalid("Chữ nằm ngoài vùng in");
-        try { o.setLayoutJson(mapper.writeValueAsString(new OrderLayout(layers, l.text()))); }
-        catch (Exception e) { throw new IllegalStateException(e); }
-        return layers.isEmpty() ? null : layers.get(0).slug();
-    }
-
-    private static boolean in01(double v) { return v >= 0 && v <= 1; }
 
     private void apply(CustomerOrder o, CreateOrderRequest r) {
-        String first = applyLayout(o, r.layoutJson());
+        List<Layer> layers = applyLayout(o, r.layoutJson());
+        String first = layers.isEmpty() ? null : layers.get(0).slug();
+        int layerCount = layers.size();
         if (o.getLayoutJson() == null && r.memeSlug() != null && !r.memeSlug().isBlank()) { // client cũ: chỉ gửi memeSlug
-            approvedMeme(r.memeSlug()); first = r.memeSlug();
+            layouts.approvedMeme(r.memeSlug()); first = r.memeSlug(); layerCount = 1;
         }
         if (r.spyTemplateId() != null && !spyForms.existsById(r.spyTemplateId()))
             throw AppException.invalid("Kịch bản form ngụy trang không hợp lệ");
@@ -244,6 +210,8 @@ public class OrderService {
         // thiệp: mặc định thiệp điệp viên nếu có dùng form ngụy trang, không thì thiệp meme
         o.setCardStyle(r.cardStyle() != null ? r.cardStyle() : (o.getSpyTemplateId() != null ? "SPY" : "MEME"));
         o.setCardMessage(blankToNull(r.cardMessage()));
+        // giá tính lại mỗi lần đặt / sửa, theo số meme trên áo và kiểu thiệp
+        o.setPrice(prices.priceOf(layerCount, o.getCardStyle()));
         // mọi đơn đều qua quản trị duyệt (thiết kế, ảnh tải lên, chữ, lời nhắn); từ nghi vi phạm thì gắn cờ để xem kỹ
         o.setContentStatus(filter.isSuspicious(o.getTextLine1(), o.getTextLine2(), o.getGiverName(), o.getRecipientName(), o.getCardMessage())
                 ? ContentStatus.FLAGGED : ContentStatus.PENDING_REVIEW);

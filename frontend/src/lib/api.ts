@@ -1,4 +1,4 @@
-import type { Batch, BatchSummary, CreateOrder, Customer, CustomerLoginResponse, Keychain, LoginResponse, NewCustomer, UploadResult, Meme, MemeStatus, NewStaff, Order, OrderStatus, PaymentQr, Report, ShirtColor, SizeChart, SpyForm, StaffRow, StaffUser } from './types';
+import type { Batch, BatchSummary, CreateOrder, Customer, CustomerLoginResponse, Keychain, LoginResponse, NewCustomer, UploadResult, Meme, MemeStatus, NewStaff, Order, OrderStatus, PaymentQr, Report, SaveDesign, SavedDesign, ShirtColor, SizeChart, SpyForm, StaffRow, StaffUser } from './types';
 import { clearSession, getSession } from './session';
 import { clearCustomerSession, getCustomerSession } from './customer';
 
@@ -38,6 +38,7 @@ const realApi = {
   suggestSize: (heightCm: number, weightKg: number, usualSize: string) =>
     post<{ sizeCode: string; reason: string }>('/size-suggestions', { heightCm, weightKg, usualSize }),
   openBatch: () => http<Batch>('/batches/open'),
+  pricing: () => http<{ base: number; extraMemes: number; memeCard: number; max: number }>('/pricing'),
   /** Tài khoản khách: khách vãng lai xem/thiết kế tự do, đặt đơn mới cần đăng nhập. */
   customer: {
     register: (c: NewCustomer) => post<CustomerLoginResponse>('/customer/register', c),
@@ -49,6 +50,9 @@ const realApi = {
     updateOrder: (code: string, o: CreateOrder) => put<Order>(`/customer/orders/${encodeURIComponent(code)}`, o),
     cancelOrder: (code: string) => post<Order>(`/customer/orders/${encodeURIComponent(code)}/cancel`),
     paymentQr: (code: string) => http<PaymentQr>(`/customer/orders/${encodeURIComponent(code)}/payment-qr`),
+    designs: () => http<SavedDesign[]>('/customer/designs'),
+    saveDesign: (d: SaveDesign) => post<SavedDesign>('/customer/designs', d),
+    deleteDesign: (id: number) => http<void>(`/customer/designs/${id}`, { method: 'DELETE' }),
     upload: (file: Blob, name: string) => { const f = new FormData(); f.append('file', file, name); return http<UploadResult>('/customer/uploads', { method: 'POST', body: f }); },
   },
   auth: {

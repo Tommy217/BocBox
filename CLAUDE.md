@@ -3,7 +3,8 @@
 Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và quyết định kỹ thuật. Trả lời và viết comment bằng tiếng Việt.
 
 ## Mô hình kinh doanh (đã chốt, đừng tự đổi)
-- Bán **một box duy nhất 350.000đ**: 1 áo phông in meme (người tặng **tự custom** trên web, hoặc chọn **mẫu shop thiết kế sẵn** rồi sửa chữ/màu) + 1 **"khô gấu"** = móc khóa thú bông dẹt in ảnh meme (mẫu nhóm chọn: Doge chiến binh cầm kiếm và khiên), **random** trong series 6 mẫu. Đóng trong hộp kraft thắt nơ, lót giấy rơm (cập nhật 30/10/2026).
+- Bán **một box duy nhất, giá 275.000–299.000đ theo tùy chọn in** (chốt 07/11/2026, trước là 350.000đ): gốc 275k; áo 2–4 meme/ảnh +15k (một lần); thiệp meme in màu +9k (chỉ khi áo có meme). Bảng giá ở `bocbox.pricing` (application.yml), tính ở `service/PriceCalculator` (giá ghi vào đơn luôn do backend tính lại khi đặt/sửa), công khai qua `GET /api/v1/pricing`; frontend `lib/pricing.ts` (`usePricing`, `priceLines`) và `PRICE` trong script Mongo phải khớp. Báo cáo hòa vốn = `report.fixed-cost-per-month` ÷ (giá TB đơn đã trả − `report.unit-cost`).
+  Box gồm: 1 áo phông in meme (người tặng **tự custom** trên web, hoặc chọn **mẫu shop thiết kế sẵn** rồi sửa chữ/màu) + 1 **"khô gấu"** = móc khóa thú bông dẹt in ảnh meme (mẫu nhóm chọn: Doge chiến binh cầm kiếm và khiên), **random** trong series 6 mẫu. Đóng trong hộp kraft thắt nơ, lót giấy rơm (cập nhật 30/10/2026).
 - Trang chủ (`pages/Home.tsx`) đã gộp phần "Trong hộp" cũ (05/11/2026, bỏ `BoxPage.tsx`, `/box` chuyển về `/`): hero → dải meme → mở hộp → áo (tự custom / `SHOP_DESIGNS`) → khô gấu → bao bì, tag, thiệp → 4 bước + lịch đợt → FAQ → tham khảo thị trường → CTA. Ảnh tham khảo trong `frontend/public/products/` (Lazada, có link nguồn; `kho-gau-nhom.webp` là ảnh nhóm gửi).
 - Chọn mẫu shop (trang chủ, `/shop`) đi qua `applyTemplate` (`lib/draft.ts`): đang có bản thiết kế dở thì hỏi trước, không chọn mẫu khác thì nháp giữ nguyên.
 - Trang `/shop` (`pages/Shop.tsx`, dữ liệu `lib/readyBoxes.ts`): kệ 12 hộp có sẵn kiểu thẻ vuông (tham khảo thecurator.vn), áo đã thiết kế, khô gấu hiện mờ (bí mật). "Chọn hộp này" ghi nháp rồi mở Xưởng in ở bước Tag & thiệp.
@@ -13,7 +14,18 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
 - Trải nghiệm đi kèm: **form ngụy trang** (Google Form mẫu để hỏi size/sở thích người nhận mà không lộ quà), **author tag** "Thiết kế bởi … dành cho …", **thiệp** (cập nhật 01/11/2026).
   - **Author tag** = nhãn vải cotton mộc in mực nâu, gập hai đầu, **may ngoài áo ở gấu áo phía trước** (không phải thẻ treo).
   - **Thiệp kraft 15×10 cm**, 3 kiểu (`cardStyle`): `SPY` thiệp điệp viên (dấu TUYỆT MẬT + lời thú tội của form đã dùng), `MEME` (in meme đầu tiên trên áo), `PLAIN` (kraft trơn). Lời nhắn (`cardMessage`, ≤300 ký tự) khách tự viết hoặc bấm gợi ý theo meme (`lib/cardIdeas.ts`). Lời nhắn đi qua hàng chờ duyệt cùng chữ in áo.
-- Custom áo miễn phí, chỉ trong vùng in cố định mặt trước A4 (giữ giá vốn ~205.000đ/box).
+- Custom áo trong vùng in cố định mặt trước A4 (giữ giá vốn ~205.000đ/box); phụ thu duy nhất là nhiều meme và thiệp meme như trên.
+
+## Giao diện (design system Figma "EXE", áp dụng 07/11/2026)
+- Màu: thang `--orange-*` (chính), `--green-*` (phụ), `--grey-*` (chữ) trong `:root` của `styles.css`. Chữ trên nền cam dùng màu mực `--ink` (chữ trắng trên cam-500 chỉ 1,95:1).
+- Font: Gluten (tiêu đề, nút, nhãn viết tay; có bộ chữ tiếng Việt), Be Vietnam Pro (chữ thường). Patrick Hand, Baloo 2 chỉ còn cho chữ in áo/tag/thiệp trên canvas.
+- Nút: `.btn` = Primary (nền cam, viền + bóng mực), `.btn.ghost` = Secondary (nền trắng, viền mực).
+- Logo `frontend/public/brand/logo.png` (xuất từ Figma). Dải thông báo xanh (đợt đang mở · Free-ship Hoà Lạc · khoảng giá) + thanh menu: Trong hộp có gì? · Hộp quà (Áo sẵn có / Thiết kế áo / Khô gấu bí ẩn – chỉ dẫn tới mục giới thiệu, không bán riêng) · Phòng điệp viên · Đơn của tôi (thay "Giỏ của tôi" của Figma: không có giỏ hàng) · Thiết kế ngay · Đăng nhập.
+- Đi tới một mục trang chủ: `nav('/', { state: { section: 'kho-gau' } })`, App tự cuộn.
+- Hero trang chủ: chữ theo Figma ("Món quà KHÔNG bao giờ NHẠT", giá từ 275K, mascot `Mascot` trên nút "Tạo hộp quà"); phần hình **giữ bản cũ** theo yêu cầu chủ dự án (07/11): áo đổi màu + đổi meme liên tục, sticker "Bản duy nhất", ảnh khô gấu, author tag; không có thiệp.
+- Màn mở đầu "mở hộp" `components/Intro.tsx` theo Figma Wireframe 5 → 2 → 4 → 3: hai cánh cửa cam + khe trắng, hai cánh tay nét đen (SVG vẽ lại theo Figma) nắm mép cửa; khách **bấm** (hoặc kéo chuột / vuốt) để cửa tách ra, hiện logo, rồi "Hộp quà tặng cá nhân hoá · chạm để mở quà". Chỉ ở trang chủ, lần đầu mỗi phiên (`sessionStorage` `bocbox:intro`), có Bỏ qua / Esc, tắt khi máy bật giảm chuyển động. Màn chờ cũ `LoadingScreen` không còn dùng.
+- Bản demo: không hiện link "Nguồn ảnh" và đã bỏ mục "Tham khảo thị trường" (không cho xem sản phẩm shop khác). Nguồn ảnh vẫn ghi trong dữ liệu (`href`) và dòng credit ở chân trang.
+- **Mẫu của tôi** (`/my-designs`, `pages/MyDesigns.tsx`): khách đăng nhập lưu thiết kế áo từ Xưởng in (nút "Lưu vào Mẫu của tôi", ảnh tự tải lên được gửi lên server trước), mở lại bằng `applyTemplate`. Backend: collection `saved_designs` (`entity/SavedDesign`, `service/SavedDesignService`, tối đa 20 mẫu/tài khoản), API `GET/POST /customer/designs`, `DELETE /customer/designs/{id}`. Mẫu lưu không cần duyệt; chỉ duyệt khi đặt đơn. Kiểm tra bố cục áo dùng chung `service/LayoutValidator` (đơn hàng và mẫu lưu).
 
 ## Meme và ảnh áo
 - Quyết định của chủ dự án (30/10/2026): bản demo môn học **dùng ảnh meme gốc tải từ mạng** (template Imgflip), không cần sàng lọc bản quyền. Nếu bán thật thì phải xem lại.

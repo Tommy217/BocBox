@@ -23,12 +23,23 @@ public class ReportService {
     private final CustomerOrderRepository orders;
     private final BatchRepository batches;
     private final BocboxProperties.Report cfg;
+    private final BocboxProperties.Pricing pricing;
 
     public ReportService(CustomerOrderRepository orders, BatchRepository batches, BocboxProperties props) {
-        this.orders = orders; this.batches = batches; this.cfg = props.report();
+        this.orders = orders; this.batches = batches; this.cfg = props.report(); this.pricing = props.pricing();
     }
 
     private static long revenue(List<CustomerOrder> l) { return l.stream().mapToLong(o -> o.getPrice()).sum(); }
+
+    /**
+     * Số box/tháng cần bán để hòa vốn = chi phí cố định ÷ lãi gộp trung bình mỗi box.
+     * Giá trung bình lấy từ các đơn đã trả tiền (giá thay đổi theo tùy chọn 275–299k); chưa có đơn thì lấy giá gốc cho chắc.
+     */
+    private int breakEvenBoxes(List<CustomerOrder> paid) {
+        double avgPrice = paid.isEmpty() ? pricing.base() : (double) revenue(paid) / paid.size();
+        double margin = avgPrice - cfg.unitCost();
+        return margin <= 0 ? 999 : (int) Math.ceil(cfg.fixedCostPerMonth() / margin);
+    }
 
     /** Bảng gửi xưởng: số áo theo màu × size (chỉ đơn đã thanh toán), kèm số đơn còn chờ duyệt. */
     public BatchSummaryResponse batchSummary(Long batchId) {
@@ -58,7 +69,8 @@ public class ReportService {
             return new BatchStatResponse(b.getCode(), b.getStatus().name(), b.getOpenAt(), l.size(), p.size(), revenue(p));
         }).toList();
         Map<String, Long> byStatus = all.stream().collect(Collectors.groupingBy(o -> o.getStatus().name(), TreeMap::new, Collectors.counting()));
-        return new ReportResponse(paid.size(), cfg.breakEvenBoxes(), revenue(paid), paid.size() * cfg.grossProfitPerBox(),
+        long revenue = revenue(paid);
+        return new ReportResponse(paid.size(), breakEvenBoxes(paid), revenue, revenue - paid.size() * cfg.unitCost(),
                 memeCount, stats, byStatus);
     }
 }

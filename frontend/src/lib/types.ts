@@ -52,6 +52,10 @@ export type LoginResponse = { token: string; user: StaffUser };
 export type Customer = { id: number; phone: string; fullName: string; email: string | null; expiresAt: string };
 export type CustomerLoginResponse = { token: string; customer: Customer };
 export type NewCustomer = { phone: string; password: string; fullName: string; email: string };
+/** Một mẫu trong "Mẫu của tôi" (chỉ phần áo); dựng lại áo bằng designFromOrder. */
+export type SavedDesign = { id: number; name: string; memeSlug: string | null; colorHex: string; textLine1: string | null; textLine2: string | null;
+  font: string; position: 'CHEST' | 'CENTER'; layoutJson: string | null; createdAt: string };
+export type SaveDesign = { name: string; colorHex: string; textLine1: string; textLine2: string; font: string; layoutJson: string };
 export type UploadResult = { slug: string; url: string; contentType: string; sizeBytes: number };
 export type Keychain = { id: number; seriesName: string; name: string; slug: string; stockQty: number };
 /** Tài khoản nhân viên trong trang quản lý (chỉ ADMIN xem). */
