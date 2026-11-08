@@ -40,7 +40,7 @@ const pct = (v: number) => `${v * 100}%`;
 type Sel = number | 'text' | null;
 
 /**
- * Áo xem trước có thể kéo thả: mỗi meme và khối chữ là một ô trong suốt phủ lên vùng in A4,
+ * Áo xem trước có thể kéo thả: mỗi meme và khối chữ là một ô trong suốt phủ lên vùng in A3,
  * kéo để di chuyển, kéo góc dưới phải để đổi cỡ meme. Mọi vị trí tính theo tỉ lệ vùng in nên
  * đúng ở mọi cỡ màn hình và khớp file in.
  */

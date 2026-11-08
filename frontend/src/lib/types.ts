@@ -8,7 +8,7 @@ export type Batch = { id: number; code: string; openAt: string; closeAt: string;
 export type OrderStatus = 'PENDING_APPROVAL' | 'PENDING_PAYMENT' | 'PAID' | 'PRINTING' | 'PACKING' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REPRINT';
 export type ContentStatus = 'PENDING_REVIEW' | 'FLAGGED' | 'APPROVED' | 'NEEDS_EDIT';
 
-/** Một meme đặt trên áo: tâm (x, y) và bề rộng w, tính theo tỉ lệ vùng in A4 (0..1). */
+/** Một meme đặt trên áo: tâm (x, y) và bề rộng w, tính theo tỉ lệ vùng in (khổ A3, 0..1). */
 export type MemeLayer = { slug: string; x: number; y: number; w: number };
 /** Khối 2 dòng chữ: tâm (x, y) và cỡ chữ s, tính theo tỉ lệ vùng in. */
 export type TextBlock = { x: number; y: number; s: number };

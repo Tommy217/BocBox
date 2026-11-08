@@ -14,7 +14,7 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
 - Trải nghiệm đi kèm: **form ngụy trang** (Google Form mẫu để hỏi size/sở thích người nhận mà không lộ quà), **author tag** "Thiết kế bởi … dành cho …", **thiệp** (cập nhật 01/11/2026).
   - **Author tag** = nhãn vải cotton mộc in mực nâu, gập hai đầu, **may ngoài áo ở gấu áo phía trước** (không phải thẻ treo).
   - **Thiệp kraft 15×10 cm**, 3 kiểu (`cardStyle`): `SPY` thiệp điệp viên (dấu TUYỆT MẬT + lời thú tội của form đã dùng), `MEME` (in meme đầu tiên trên áo), `PLAIN` (kraft trơn). Lời nhắn (`cardMessage`, ≤300 ký tự) khách tự viết hoặc bấm gợi ý theo meme (`lib/cardIdeas.ts`). Lời nhắn đi qua hàng chờ duyệt cùng chữ in áo.
-- Custom áo trong vùng in cố định mặt trước A4 (giữ giá vốn ~205.000đ/box); phụ thu duy nhất là nhiều meme và thiệp meme như trên.
+- Custom áo trong vùng in cố định mặt trước **khổ A3 29,7 × 42 cm** (chốt 08/11/2026 theo cỡ in phổ biến của áo oversize; trước là A4). Giá vốn ~205.000đ/box tính theo A4 cũ: **cần hỏi lại giá in DTF khổ A3 của xưởng** rồi sửa `bocbox.report.unit-cost`. Phụ thu duy nhất là nhiều meme và thiệp meme như trên.
 
 ## Giao diện (design system Figma "EXE", áp dụng 07/11/2026)
 - Màu: thang `--orange-*` (chính), `--green-*` (phụ), `--grey-*` (chữ) trong `:root` của `styles.css`. Chữ trên nền cam dùng màu mực `--ink` (chữ trắng trên cam-500 chỉ 1,95:1).
@@ -30,7 +30,11 @@ Dự án khởi nghiệp sinh viên. Một mình chủ dự án (Dũng) code và
 ## Meme và ảnh áo
 - Quyết định của chủ dự án (30/10/2026): bản demo môn học **dùng ảnh meme gốc tải từ mạng** (template Imgflip), không cần sàng lọc bản quyền. Nếu bán thật thì phải xem lại.
 - Ảnh meme in áo: `frontend/public/memes/{slug}.jpg` (20 meme). Slug phải khớp collection `memes` trong `backend/db/bocbox-full.mongodb.js`.
-- Mockup áo: ảnh áo trắng thật `frontend/public/mockup/tee-white.png` (THOR, Wikimedia Commons, CC BY 2.0, ghi nguồn ở footer). Màu áo khác được nhuộm bằng canvas trong `art.ts` (`drawTee`). Vùng in đo theo tỉ lệ ảnh, xem `PRINT_BOX`. Tag vải vẽ ở `TAG_SPOT` khi truyền `tag` cho `TeePreview`/`TeeEditor`.
+  - Bản in độ phân giải cao: `frontend/public/memes/print/{slug}.jpg` (ảnh gốc Imgflip chỉ 300–900 px ≈ 30–95 dpi khi in to, nên đã phóng to x4 bằng Real-ESRGAN `realesrgan-x4plus`). Web hiển thị bản nhẹ (`memeSrc`), file in dùng `memePrintSrc`. Thêm meme mới thì thêm cả bản print (≥ 1800 px cạnh ngang).
+  - Xưởng in báo độ nét khi in từng lớp (`printDpi`, ngưỡng `MIN_PRINT_DPI` = 150) để khách thu nhỏ ảnh hoặc tải ảnh nét hơn. Ảnh khách tải lên được thu nhỏ tối đa 2200 px.
+  - Meme mới thêm đặt theo `newLayerPlacement` (meme đầu to 80% vùng in, giữa ngực).
+- Mockup áo (08/11/2026): `frontend/public/mockup/tee-boxy.png` (1100 × 943, nền trong suốt) = áo phông trơn dáng boxy oversize, trải phẳng; tách nền từ ảnh sản phẩm tham khảo (JULIDO/Midmx do chủ dự án gửi) và chuyển sang áo trắng. **Chỉ dùng cho demo môn học**, bán thật phải thay bằng ảnh áo phôi nhóm tự chụp (ghi chú ở footer). Thay ảnh khác thì đo lại `TEE_W/TEE_H`, `PRINT_BOX` (vùng in A3 = 380 × 538 px, 12,8 px/cm theo áo M ngang ngực 50 cm, cách đường may cổ ~5 cm), `PRINT_CM` và `TAG_SPOT` trong `art.ts`; bố cục thiết kế lưu theo tỉ lệ vùng in nên không bị lệch. Màu áo khác được nhuộm bằng canvas (`drawTee`).
+- Bảng size ở bước "Màu & size" của Xưởng in: `components/SizeGuide.tsx` (chiều cao/cân nặng lấy từ API `/sizes`; số đo áo A–D là **số tham khảo**, thay bằng số đo áo phôi thật khi chốt xưởng; hình `public/brand/size-guide.png`). Bấm một dòng để chọn size. Máy tính size vẫn chỉ ở Phòng điệp viên.
 - Thiết kế áo = 1–4 lớp meme `{slug,x,y,w}` + khối chữ `{x,y,s}`, tọa độ theo tỉ lệ vùng in, lưu ở `layoutJson` của đơn (kiểm tra ở `OrderService.applyLayout`). Đơn cũ không có bố cục được đổi bằng `withLayout`.
 - Tag vải và thiệp kraft vẽ bằng canvas trong `lib/paper.ts` (`drawLabel`, `drawCard`; sợi vải, giấy kraft, mực in có seed nên ổn định). Component `AuthorTag`, `GiftCard` trong `components/Cards.tsx`; nền "mở hộp" `.flatlay` dùng ảnh giấy rơm thật `products/giay-rom.jpg`.
 - Khô gấu và mascot dùng ảnh thật (`KhoGauPhoto`).

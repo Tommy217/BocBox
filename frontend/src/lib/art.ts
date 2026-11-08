@@ -21,6 +21,11 @@ export const memeSrc = (slug: string) =>
   : slug.startsWith(LOCAL_PREFIX) ? localImages.get(slug.slice(LOCAL_PREFIX.length)) ?? ''
   : `${BASE}memes/${slug}.jpg`;
 /**
+ * Ảnh dùng cho FILE IN: meme có sẵn lấy bản độ phân giải cao trong public/memes/print/ (phóng to x4 bằng Real-ESRGAN,
+ * đủ ~150 dpi trở lên khi in to trên khổ A3); ảnh khách tải lên dùng chính ảnh gốc. Web vẫn hiển thị bản nhẹ (memeSrc).
+ */
+export const memePrintSrc = (slug: string) => (isUserImage(slug) ? memeSrc(slug) : `${BASE}memes/print/${slug}.jpg`);
+/**
  * Ảnh áo phông trơn dáng boxy oversize, trải phẳng, nền trong suốt (1100 × 943). Tách nền từ ảnh sản phẩm tham khảo
  * và chuyển sang áo trắng để nhuộm màu; CHỈ DÙNG DEMO MÔN HỌC, bán thật thì thay bằng ảnh áo phôi nhóm tự chụp.
  */
@@ -48,12 +53,15 @@ const isDark = (hex: string) => {
 };
 export const textColorFor = (shirtHex: string) => (isDark(shirtHex) ? '#FFFFFF' : '#2B2118');
 
+/** Khổ in thật: A3 (cỡ hình in phổ biến của áo oversize, chốt 08/11/2026; trước là A4). */
+export const PRINT_CM = { w: 29.7, h: 42 } as const;
 /**
- * Vùng in A4 giữa ngực, theo tỉ lệ ảnh áo: [trái, trên, rộng, cao] (350 × 495 px trên ảnh 1100 × 943).
- * Bố cục thiết kế lưu theo tỉ lệ vùng in, nên đổi ảnh áo không làm lệch thiết kế đã lưu.
+ * Vùng in A3 giữa ngực, theo tỉ lệ ảnh áo: [trái, trên, rộng, cao] = 380 × 538 px trên ảnh 1100 × 943
+ * (áo size M ngang ngực ~50 cm = 640 px → 12,8 px/cm; mép trên cách đường may cổ ~5 cm).
+ * Bố cục thiết kế lưu theo tỉ lệ vùng in (A3 và A4 cùng tỉ lệ 1 : √2), nên đổi khổ không làm lệch thiết kế đã lưu.
  */
-export const PRINT_BOX = [371 / TEE_W, 165 / TEE_H, 350 / TEE_W, 495 / TEE_H] as const;
-/** Rộng / cao của vùng in tính bằng pixel ảnh áo (≈ tỉ lệ A4). */
+export const PRINT_BOX = [356 / TEE_W, 191 / TEE_H, 380 / TEE_W, 538 / TEE_H] as const;
+/** Rộng / cao của vùng in tính bằng pixel ảnh áo (≈ 1 : √2). */
 export const PRINT_RATIO = (PRINT_BOX[2] * TEE_W) / (PRINT_BOX[3] * TEE_H);
 export const MAX_LAYERS = 4;
 export const DEFAULT_TEXT: TextBlock = { x: 0.5, y: 0.82, s: 0.075 };
@@ -90,10 +98,10 @@ export function drawPrint(c: Ctx, d: Design, imgs: Map<string, HTMLImageElement>
   c.restore();
 }
 
-/** Tải ảnh của mọi lớp meme trong thiết kế (ảnh lỗi thì bỏ qua). */
-export async function loadLayerImages(d: Design) {
+/** Tải ảnh của mọi lớp meme trong thiết kế (ảnh lỗi thì bỏ qua); forPrint = bản độ phân giải cao cho file in. */
+export async function loadLayerImages(d: Design, forPrint = false) {
   const slugs = [...new Set(withLayout(d).layers.map((l) => l.slug))];
-  const imgs = await Promise.all(slugs.map((s) => loadImage(memeSrc(s)).catch(() => null)));
+  const imgs = await Promise.all(slugs.map((s) => (forPrint ? loadImage(memePrintSrc(s)).catch(() => loadImage(memeSrc(s))) : loadImage(memeSrc(s))).catch(() => null)));
   return new Map(slugs.flatMap((s, i) => (imgs[i] ? [[s, imgs[i]!] as const] : [])));
 }
 
@@ -139,13 +147,13 @@ export async function ensureFonts() {
     document.fonts.load(`800 40px "${f}"`), document.fonts.load(`600 40px "${f}"`), document.fonts.load(`400 40px "${f}"`)])).catch(() => undefined);
 }
 
-/** Xuất file in PNG A4 300 dpi (2480 × 3508), nền trong suốt, để gửi xưởng DTF. */
+/** Xuất file in PNG A3 300 dpi (3508 × 4961), nền trong suốt, để gửi xưởng DTF. */
 export async function downloadPrintFile(d: Design, fileName: string) {
   await ensureFonts();
-  const imgs = await loadLayerImages(d);
-  const cv = document.createElement('canvas'); cv.width = 2480; cv.height = 3508;
+  const imgs = await loadLayerImages(d, true);
+  const cv = document.createElement('canvas'); cv.width = 3508; cv.height = 4961;
   const c = cv.getContext('2d')!;
-  drawPrint(c, d, imgs, 120, 175, 2240, 3158); // lề 120 px, vùng in giữ tỉ lệ A4
+  drawPrint(c, d, imgs, 120, 170, 3268, 4621); // lề 120 px, vùng in giữ tỉ lệ A3
   const url = cv.toDataURL('image/png');
   const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
 }
@@ -163,3 +171,12 @@ export function designFromOrder(o: { memeSlug: string | null; colorHex: string; 
   try { layout = o.layoutJson ? JSON.parse(o.layoutJson) : {}; } catch { /* bố cục hỏng → dùng mặc định */ }
   return { memeSlug: o.memeSlug ?? '', colorHex: o.colorHex, textLine1: o.textLine1 ?? '', textLine2: o.textLine2 ?? '', font: o.font, position: o.position, ...layout };
 }
+
+/** Chỗ đặt meme mới thêm (theo tỉ lệ vùng in): meme đầu tiên to, giữa ngực; các meme sau nhỏ hơn, xếp lệch để không đè kín. */
+export function newLayerPlacement(n: number): Omit<MemeLayer, 'slug'> {
+  return [{ x: 0.5, y: 0.36, w: 0.8 }, { x: 0.3, y: 0.62, w: 0.45 }, { x: 0.7, y: 0.62, w: 0.45 }, { x: 0.5, y: 0.16, w: 0.35 }][Math.min(n, 3)];
+}
+
+/** Độ nét khi in một lớp: số chấm/inch = rộng ảnh (px) ÷ bề rộng in thật (inch). Dưới ~150 dpi là dễ thấy mờ. */
+export const MIN_PRINT_DPI = 150;
+export const printDpi = (imgWidthPx: number, layerW: number) => Math.round(imgWidthPx / ((layerW * PRINT_CM.w) / 2.54));

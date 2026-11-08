@@ -99,7 +99,7 @@ export function OrderDetail() {
             <GiftCard style={o.cardStyle ?? 'SPY'} giver={o.giverName} recipient={o.recipientName} message={o.cardMessage ?? ''} confession={confession} memeSlug={design.layers?.[0]?.slug ?? o.memeSlug ?? undefined} width={280} />
             <AuthorTag giver={o.giverName} recipient={o.recipientName} width={150} />
           </div>
-          <button className="btn ghost small" onClick={() => downloadPrintFile(design, `${o.code}_${o.colorName}_${o.sizeCode}.png`)}><Icon name="download" size={18} /> File in PNG (A4, 300 dpi)</button>
+          <button className="btn ghost small" onClick={() => downloadPrintFile(design, `${o.code}_${o.colorName}_${o.sizeCode}.png`)}><Icon name="download" size={18} /> File in PNG (A3, 300 dpi)</button>
         </div>
 
         <div className="ad-stack">

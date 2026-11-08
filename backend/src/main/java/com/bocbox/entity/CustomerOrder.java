@@ -35,7 +35,7 @@ public class CustomerOrder implements SequencedEntity {
     private String font;
     /** CHEST | CENTER */
     private String position;
-    /** Bố cục tự do: {"layers":[{slug,x,y,w}],"text":{x,y,s}}, tọa độ theo tỉ lệ vùng in A4. */
+    /** Bố cục tự do: {"layers":[{slug,x,y,w}],"text":{x,y,s}}, tọa độ theo tỉ lệ vùng in A3. */
     private String layoutJson;
     // thiệp kèm hộp: SPY / MEME / PLAIN + lời nhắn
     private String cardStyle;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { BLANK_DESIGN, designFromOrder, isBlankDesign, isUserImage, LOCAL_PREFIX, MAX_LAYERS, memeSrc, registerLocalImage, toOrderDesign, withLayout } from '../lib/art';
+import { BLANK_DESIGN, designFromOrder, isBlankDesign, isUserImage, LOCAL_PREFIX, MAX_LAYERS, memeSrc, registerLocalImage, toOrderDesign, withLayout, loadImage, memePrintSrc, MIN_PRINT_DPI, newLayerPlacement, PRINT_CM, printDpi } from '../lib/art';
 import { clearDraft, loadDraft, saveDraft, type Draft } from '../lib/draft';
 import { useAuth } from '../lib/auth';
 import { FONTS, type Batch, type CardStyle, type Design, type Meme, type MemeLayer, type ShirtColor, type SpyForm } from '../lib/types';
@@ -24,7 +24,7 @@ const STEPS = [
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
 /** Thu nhỏ ảnh khách chọn (cạnh dài ≤ 1400 px) để lưu nháp và gửi lên nhẹ; PNG/WEBP giữ nền trong suốt. */
-async function shrinkImage(file: File, max = 1400): Promise<string> {
+async function shrinkImage(file: File, max = 2200): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => fail(new Error('Không đọc được ảnh này')); i.src = url; });
@@ -124,6 +124,16 @@ export default function Builder() {
   const total = lines.reduce((s, l) => s + l.amount, 0);
   const memeName = (slug: string) => (isUserImage(slug) ? 'Ảnh của bạn' : memes.find((m) => m.slug === slug)?.name ?? slug);
   const selLayer = typeof sel === 'number' ? layers[sel] : undefined;
+  // bề rộng (px) của ảnh dùng để in từng lớp, để báo độ nét khi in khổ A3
+  const [printPx, setPrintPx] = useState<Record<string, number>>({});
+  useEffect(() => {
+    layers.forEach((l) => {
+      if (printPx[l.slug]) return;
+      loadImage(memePrintSrc(l.slug)).catch(() => loadImage(memeSrc(l.slug)))
+        .then((img) => setPrintPx((m) => ({ ...m, [l.slug]: img.naturalWidth }))).catch(() => undefined);
+    });
+  }, [layers.map((l) => l.slug).join()]);
+  const selDpi = selLayer && printPx[selLayer.slug] ? printDpi(printPx[selLayer.slug], selLayer.w) : null;
   const setLayers = (ls: MemeLayer[]) => upd({ layers: ls, memeSlug: ls[0]?.slug ?? '' });
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -150,7 +160,7 @@ export default function Builder() {
   function pickMeme(slug: string) {
     if (layers.length < MAX_LAYERS) {
       // xếp lệch nhau một chút để hình mới không đè kín hình cũ
-      setLayers([...layers, { slug, x: 0.5, y: 0.3 + 0.12 * layers.length, w: 0.5 }]); setSel(layers.length);
+      setLayers([...layers, { slug, ...newLayerPlacement(layers.length) }]); setSel(layers.length);
     } else if (typeof sel === 'number') {
       setLayers(layers.map((l, i) => (i === sel ? { ...l, slug } : l)));
     } else setErr(`Áo tối đa ${MAX_LAYERS} meme. Chọn một meme trên áo để thay, hoặc xóa bớt.`);
@@ -237,7 +247,7 @@ export default function Builder() {
         <dl className="summary">
           <div><dt>Meme</dt><dd>{layers.length ? layers.map((l) => memeName(l.slug)).join(', ') : 'Chưa có'}</dd></div>
           <div><dt>Áo</dt><dd>{colorName} · size {size}</dd></div>
-          <div><dt>Vùng in</dt><dd>Mặt trước, khổ A4</dd></div>
+          <div><dt>Vùng in</dt><dd>Mặt trước, khổ A3</dd></div>
           {lines.map((l, i) => <div key={l.label} className={i ? 'extra' : ''}><dt>{i ? '+ ' : ''}{l.label}</dt><dd>{vnd(l.amount)}</dd></div>)}
           <div className="total"><dt>Tổng</dt><dd>{vnd(total)}</dd></div>
         </dl>
@@ -282,6 +292,9 @@ export default function Builder() {
                   <input type="range" min={0.12} max={1} step={0.01} value={selLayer.w}
                     onChange={(e) => setLayers(layers.map((l, i) => (i === sel ? { ...l, w: +e.target.value, x: Math.min(Math.max(l.x, +e.target.value / 2), 1 - +e.target.value / 2) } : l)))} />
                 </label>
+                {selDpi !== null && (selDpi >= MIN_PRINT_DPI
+                  ? <span className="hint hint-ok small">In ra rộng khoảng {Math.round(selLayer.w * PRINT_CM.w)} cm, độ nét ~{selDpi} dpi: in rõ.</span>
+                  : <span className="hint hint-warn small">In ra rộng khoảng {Math.round(selLayer.w * PRINT_CM.w)} cm nhưng ảnh chỉ đạt ~{selDpi} dpi nên có thể bị mờ. Thu nhỏ ảnh hoặc tải ảnh nét hơn (khuyên từ {MIN_PRINT_DPI} dpi).</span>)}
                 <div className="choice-row">
                   <button type="button" className="choice" onClick={bringToFront}>Đưa lên trên cùng</button>
                   <button type="button" className="choice" onClick={removeLayer}>Xóa khỏi áo</button>

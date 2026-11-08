@@ -27,7 +27,7 @@ const faq = (p: Pricing) => [
   ['Có cần tài khoản không?', 'Không cần để xem và thiết kế: cứ vào Xưởng in thử thoải mái. Chỉ lúc bấm đặt hộp mới cần đăng nhập (hoặc đăng ký nhanh bằng số điện thoại) để theo dõi ở mục Đơn của tôi.'],
   ['Thanh toán thế nào?', 'Đặt xong, nhóm duyệt thiết kế (chữ, ảnh, lời nhắn) trước. Duyệt xong bạn mới thấy mã VietQR để trả trước 100%, nội dung chuyển khoản là mã đơn. Cần sửa thì nhóm ghi chú lại, bạn sửa ngay trong Đơn của tôi.'],
   ['Đặt rồi có sửa hay hủy được không?', 'Được, miễn phí cho tới khi đợt chốt (23:59 Chủ nhật). Sau đó áo đã vào in nên không đổi được nữa.'],
-  ['In được những gì lên áo?', 'Tối đa bốn meme hoặc ảnh tự tải lên và hai dòng chữ (28 ký tự mỗi dòng), in mặt trước trong vùng A4. Mọi nội dung được nhóm duyệt trước khi in.'],
+  ['In được những gì lên áo?', 'Tối đa bốn meme hoặc ảnh tự tải lên và hai dòng chữ (28 ký tự mỗi dòng), in mặt trước khổ A3 (29,7 × 42 cm, cỡ hình in phổ biến của áo form rộng). Mọi nội dung được nhóm duyệt trước khi in.'],
   ['Free-ship ở đâu?', 'Free-ship cho đơn giao trong khu Hoà Lạc. Địa chỉ khác nhóm báo phí ship khi duyệt đơn.'],
   ['Khô gấu có chọn được mẫu không?', 'Không, đó là phần bất ngờ: mỗi box bốc ngẫu nhiên trong các mẫu khô gấu của series đang bán. Cả 6 mẫu được công bố trên kệ bên dưới.'],
   ['Muốn thêm món hoặc thiết kế riêng?', 'BocBox chỉ bán một box duy nhất. Yêu cầu ngoài công cụ thiết kế, nhắn Zalo/Messenger của nhóm để được báo giá riêng.'],
@@ -165,7 +165,7 @@ export default function Home() {
       </section>
 
       <section>
-        <SectionTitle kicker="Món 1" title="Áo meme: tự làm hay lấy mẫu shop?" sub={`Cùng hộp, cùng bảng giá: ${k(pricing.base)} cho áo 1 meme, ${k(pricing.base + pricing.extraMemes)} cho áo 2–4 meme. In mặt trước trong vùng A4.`} />
+        <SectionTitle kicker="Món 1" title="Áo meme: tự làm hay lấy mẫu shop?" sub={`Cùng hộp, cùng bảng giá: ${k(pricing.base)} cho áo 1 meme, ${k(pricing.base + pricing.extraMemes)} cho áo 2–4 meme. In mặt trước khổ A3.`} />
         <div className="tee-options">
           <div className="tee-option">
             <h3><Icon name="artist-palette" size={28} /> Tự custom</h3>
