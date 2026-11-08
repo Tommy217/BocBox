@@ -161,7 +161,7 @@ export default function App() {
           <Link to="/build">Thiết kế áo</Link><Link to="/shop">Áo sẵn có</Link><Link to="/spy">Lấy size bí mật</Link><Link to="/my-orders">Đơn của tôi</Link><Link to="/my-designs">Mẫu của tôi</Link>
           <Link to="/admin" className="foot-admin"><Icon name="lock" size={14} /> Nhân viên đăng nhập</Link>
         </div>
-        <div className="foot-credit">EXE101 · SE1986 · Icon: Phosphor (MIT) · Ảnh áo: THOR, Wikimedia Commons (CC BY 2.0) · Meme: Imgflip · Ảnh bao bì tham khảo: Lazada</div>
+        <div className="foot-credit">EXE101 · SE1986 · Icon: Phosphor (MIT) · Ảnh áo phôi tham khảo: JULIDO, Midmx (chỉ dùng demo môn học) · Meme: Imgflip · Ảnh bao bì tham khảo: Lazada</div>
       </footer>
     </div>
   );

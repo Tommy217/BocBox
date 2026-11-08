@@ -126,7 +126,7 @@ export default function Home() {
         <div className="hero-visual">
           <div className="hero-blob" aria-hidden />
           <span className="hero-sticker">Bản duy nhất</span>
-          <TeePreview width={330} tag={{ giver: 'Minh', recipient: 'Lan' }} design={{ memeSlug: heroMeme, colorHex: heroColor, textLine1: 'Tôi ổn', textLine2: '(không ổn)', font: 'Baloo 2', position: 'CENTER' }} />
+          <TeePreview width={440} tag={{ giver: 'Minh', recipient: 'Lan' }} design={{ memeSlug: heroMeme, colorHex: heroColor, textLine1: 'Tôi ổn', textLine2: '(không ổn)', font: 'Baloo 2', position: 'CENTER' }} />
           <div className="hero-tag"><AuthorTag giver="Minh" recipient="Lan" width={170} /></div>
           <motion.div className="hero-mascot" animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 2.4 }}>
             <KhoGauPhoto slug="chien-binh" size={96} alt="Khô gấu Doge chiến binh" />

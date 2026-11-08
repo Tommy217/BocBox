@@ -8,6 +8,7 @@ import { FONTS, type Batch, type CardStyle, type Design, type Meme, type MemeLay
 import { cardIdeas } from '../lib/cardIdeas';
 import { useIntel } from '../lib/store';
 import { MemePhoto, TeeEditor } from '../components/Canvases';
+import { SizeGuide } from '../components/SizeGuide';
 import { AuthorTag, CARD_STYLES, GiftCard } from '../components/Cards';
 import { dmy, dmyhm, vnd } from '../components/ui';
 import { Icon, party } from '../components/Fun';
@@ -338,6 +339,7 @@ export default function Builder() {
               <span className="field-label">Size (form unisex rộng){intel.sizeCode && <span className="muted small"> · gợi ý từ phòng điệp viên: {intel.sizeCode}</span>}</span>
               <div className="choice-row">{SIZES.map((s) => <button type="button" key={s} className={`choice size ${size === s ? 'on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
             </div>
+            <SizeGuide value={size} onPick={setSize} />
             <p className="muted small">Chưa biết size? <a href="#/spy">Vào Phòng điệp viên</a> để hỏi khéo người nhận.</p>
           </>}
 

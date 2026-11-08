@@ -20,9 +20,13 @@ export const memeSrc = (slug: string) =>
   slug.startsWith(UPLOAD_PREFIX) ? `${API_BASE}/uploads/${slug.slice(UPLOAD_PREFIX.length)}`
   : slug.startsWith(LOCAL_PREFIX) ? localImages.get(slug.slice(LOCAL_PREFIX.length)) ?? ''
   : `${BASE}memes/${slug}.jpg`;
-/** Ảnh áo: "Ringflash Tshirt Blank Template" – THOR, Wikimedia Commons, CC BY 2.0 (đã tách nền). */
-export const TEE_SRC = `${BASE}mockup/tee-white.png`;
-export const TEE_RATIO = 1293 / 900;
+/**
+ * Ảnh áo phông trơn dáng boxy oversize, trải phẳng, nền trong suốt (1100 × 943). Tách nền từ ảnh sản phẩm tham khảo
+ * và chuyển sang áo trắng để nhuộm màu; CHỈ DÙNG DEMO MÔN HỌC, bán thật thì thay bằng ảnh áo phôi nhóm tự chụp.
+ */
+export const TEE_SRC = `${BASE}mockup/tee-boxy.png`;
+const TEE_W = 1100, TEE_H = 943;
+export const TEE_RATIO = TEE_H / TEE_W;
 
 const images = new Map<string, Promise<HTMLImageElement>>();
 export function loadImage(src: string) {
@@ -44,10 +48,13 @@ const isDark = (hex: string) => {
 };
 export const textColorFor = (shirtHex: string) => (isDark(shirtHex) ? '#FFFFFF' : '#2B2118');
 
-/** Vùng in A4 giữa ngực, theo tỉ lệ ảnh áo (đo trên tee-white.png): [trái, trên, rộng, cao]. */
-export const PRINT_BOX = [0.289, 0.159, 0.42, 0.414] as const;
+/**
+ * Vùng in A4 giữa ngực, theo tỉ lệ ảnh áo: [trái, trên, rộng, cao] (350 × 495 px trên ảnh 1100 × 943).
+ * Bố cục thiết kế lưu theo tỉ lệ vùng in, nên đổi ảnh áo không làm lệch thiết kế đã lưu.
+ */
+export const PRINT_BOX = [371 / TEE_W, 165 / TEE_H, 350 / TEE_W, 495 / TEE_H] as const;
 /** Rộng / cao của vùng in tính bằng pixel ảnh áo (≈ tỉ lệ A4). */
-export const PRINT_RATIO = (PRINT_BOX[2] * 900) / (PRINT_BOX[3] * 1293);
+export const PRINT_RATIO = (PRINT_BOX[2] * TEE_W) / (PRINT_BOX[3] * TEE_H);
 export const MAX_LAYERS = 4;
 export const DEFAULT_TEXT: TextBlock = { x: 0.5, y: 0.82, s: 0.075 };
 /** Áo trơn để bắt đầu thiết kế khi khách chưa chọn mẫu nào. */
@@ -91,10 +98,10 @@ export async function loadLayerImages(d: Design) {
 }
 
 /** Author tag may ngoài áo, gấu áo bên trái phía trước: tâm (x, y) và bề rộng theo tỉ lệ ảnh áo. */
-export const TAG_SPOT = { x: 0.3, y: 0.855, w: 0.15, angle: -0.05 };
+export const TAG_SPOT = { x: 0.275, y: 0.9, w: 0.12, angle: -0.05 };
 export type TagNames = { giver: string; recipient: string };
 
-/** Mockup áo: ảnh áo thật nhuộm theo màu đã chọn + phần in + author tag (nếu có). */
+/** Mockup áo: ảnh áo trơn nhuộm theo màu đã chọn + phần in + author tag (nếu có). */
 export function drawTee(c: Ctx, d: Design, W: number, H: number, tee: HTMLImageElement, imgs: Map<string, HTMLImageElement>, tag?: TagNames) {
   c.clearRect(0, 0, W, H);
   c.drawImage(tee, 0, 0, W, H);

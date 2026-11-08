@@ -306,7 +306,7 @@ nav::-webkit-scrollbar { display: none; }
 .box-tag canvas { width: 100% !important; height: auto !important; }
 .box-info { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 2px 10px; padding: 30px 16px 14px;
   background: linear-gradient(transparent, rgba(20, 14, 8, .72) 45%); color: #fff; }
-.box-info h3 { grid-column: 1 / -1; margin: 0; color: #fff; font-size: 19px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.box-info h3 { grid-column: 1 / -1; margin: 0; color: #fff; font-size: 19px; line-height: 1.5; padding-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .box-price { font-weight: 500; font-size: 15px; align-self: center; opacity: .9; }
 .box-buy { white-space: nowrap; padding: 8px 12px; border: none; border-radius: 4px; background: #c8a46b; color: #fff; font: 600 12.5px 'Be Vietnam Pro'; letter-spacing: 1.5px;
   text-transform: uppercase; transition: background .15s; }
@@ -617,6 +617,23 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; }
   font: 600 clamp(17px, 2.2vw, 24px)/1.3 var(--serif); color: var(--ink); text-align: center; pointer-events: none; }
 .intro-hint svg { flex: none; fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
 @media (max-width: 640px) { .intro-hand.h-left { top: 30%; } .intro-hand.h-right { top: 50%; } }
+
+/* ---------- bảng size ở Xưởng in ---------- */
+.size-guide { display: grid; gap: 12px; padding: 16px; background: var(--orange-50); border: 1px solid var(--orange-200); border-radius: 14px; }
+.size-guide h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 18px; }
+.size-guide h3 .icon { color: var(--brand-d); }
+.size-guide-body { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; align-items: center; }
+.size-guide-body img { width: 100%; height: auto; }
+.size-guide table { font-size: 13px; background: #fff; border-radius: 10px; overflow: hidden; }
+.size-guide th, .size-guide td { padding: 6px 5px; text-align: center; border-bottom: 1px solid var(--line); }
+.size-guide td { white-space: nowrap; }
+.size-guide th { background: var(--orange-100); font-weight: 600; line-height: 1.25; }
+.size-guide th:first-child, .size-guide td:first-child { text-align: left; }
+.size-guide tbody tr { cursor: pointer; }
+.size-guide tbody tr:hover td { background: var(--orange-50); }
+.size-guide tr.on td { background: var(--green-50); font-weight: 600; }
+.size-guide p { margin: 0; }
+@media (max-width: 640px) { .size-guide-body { grid-template-columns: 1fr; } .size-guide-body img { max-width: 200px; justify-self: center; } }
 
 /* ---------- mẫu của tôi ---------- */
 .save-design { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
